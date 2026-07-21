@@ -1,0 +1,15 @@
+# Personal overrides for this repo
+
+Copy this file to `CLAUDE.local.md` (which is gitignored) and edit it with your own per-repo
+preferences. Anything here overrides the shared instructions in `CLAUDE.md` and
+`.claude/rules/`. Your global `~/.claude/CLAUDE.md` still takes precedence over this file.
+
+Delete the examples below and add your own.
+
+<!--
+## Environment
+- I use Laravel Herd; run php directly, not Sail.
+
+## Tests
+- Run tests with `php artisan test`.
+-->

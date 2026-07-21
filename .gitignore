@@ -27,3 +27,9 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Per-developer local Claude instructions (copy from CLAUDE.local.md.example)
+/CLAUDE.local.md
+
+# Per-developer local Claude settings overrides
+/.claude/settings.local.json
