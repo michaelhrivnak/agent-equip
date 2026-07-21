@@ -1,0 +1,45 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { TEMPLATES_DIR } from "./paths.ts";
+
+export interface PackageDef {
+	id: string;
+	name: string;
+	description: string;
+	/** Present when `file` exists (and contains `contains`, if given). */
+	detect: { file: string; contains?: string };
+	/** Shell command run in the target project to install the package. */
+	install: string;
+}
+
+/** Curated packages a stack declares in templates/<stack>/packages.json (or [] if none). */
+export function loadPackages(stack: string): PackageDef[] {
+	const manifest = join(TEMPLATES_DIR, stack, "packages.json");
+	if (!existsSync(manifest)) return [];
+	const parsed = JSON.parse(readFileSync(manifest, "utf8")) as {
+		packages?: PackageDef[];
+	};
+	return parsed.packages ?? [];
+}
+
+/** Is a curated package already present in the target project? */
+export function isInstalled(target: string, pkg: PackageDef): boolean {
+	const file = join(target, pkg.detect.file);
+	if (!existsSync(file)) return false;
+	if (pkg.detect.contains === undefined) return true;
+	return readFileSync(file, "utf8").includes(pkg.detect.contains);
+}
+
+/** Curated packages for a stack that are not yet present in the target. */
+export function missingPackages(target: string, stack: string): PackageDef[] {
+	return loadPackages(stack).filter((pkg) => !isInstalled(target, pkg));
+}
+
+/** Run a package's install command in the target project. Returns true on success. */
+export function installPackage(target: string, pkg: PackageDef): boolean {
+	const res = Bun.spawnSync(["sh", "-c", pkg.install], {
+		cwd: target,
+		stdio: ["inherit", "inherit", "inherit"],
+	});
+	return res.exitCode === 0;
+}

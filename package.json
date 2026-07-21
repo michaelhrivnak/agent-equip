@@ -1,0 +1,31 @@
+{
+  "name": "ai-setup",
+  "version": "0.1.0",
+  "description": "Quickstart installer that seeds AI-development tooling into projects, per stack",
+  "license": "MIT",
+  "author": "Michael Hrivnak",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michaelhrivnak/ai-setup.git"
+  },
+  "type": "module",
+  "bin": {
+    "ai-setup": "bin/ai-setup.ts"
+  },
+  "scripts": {
+    "start": "bun run bin/ai-setup.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint --error-on-warnings ./bin ./src ./test",
+    "fix": "biome check --write ./bin ./src ./test"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "commander": "^14.0.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.5",
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}
