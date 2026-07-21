@@ -107,7 +107,7 @@ test("existing CLAUDE.md preserved + block appended once; settings.json merged (
 	);
 	expect(settings.theme).toBe("light"); // existing scalar kept
 	expect(settings.enabledPlugins["mine@x"]).toBe(true); // existing kept
-	expect(settings.enabledPlugins["caveman@caveman"]).toBe(true); // template added
+	expect(settings.permissions.allow).toContain("Read"); // template permissions merged in
 });
 
 test("existing .ai-setup/precommit is untouched; a *.ai-setup-new is left beside it", () => {

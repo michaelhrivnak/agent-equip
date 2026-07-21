@@ -13,6 +13,10 @@ Skim the README, package manifests, the directory tree, entry points, routing an
 representative modules, and the tests. Determine the stack, and how the project is actually
 built, run, and tested locally.
 
+For stack/framework/language **versions**, read the lockfile or manifest (`composer.lock`,
+`package.json`, `*.lock`) — treat auto-generated helper blocks (e.g. a Laravel Boost
+`<laravel-boost-guidelines>` section) as potentially stale and never copy a version from them.
+
 ## Produce these sections (in order)
 
 ### Project structure
@@ -35,6 +39,12 @@ Do NOT list anything the stack already implies; an agent already knows the defau
 deviations are the signals it can't guess. For each: the usual norm → what this project does
 instead → where to see it.
 
+**Start this section** with any contradictions between the ai-setup managed block below (or your
+global rules) and the actual code — one line each, formatted `block says X → real answer is Y
+(proof: <path>)`. If the block or rules name a test framework, package manager, or formatter
+(Pest, PHPUnit, Pint, npm/pnpm/bun, etc.), verify EACH against the manifest and state the result
+even when it matches. This is the highest-value catch you can make — do it first and explicitly.
+
 ### Operations
 
 The concrete commands and setup an agent needs to work here — capture what applies (skip what
@@ -48,8 +58,9 @@ is standard.
 - **Lint & format** — the tools and exact commands, and whether formatting is auto-fixed.
 - **Type checking** — the command, if the stack has one.
 - **Tests** — how to run them and the main command(s); whether the full suite is **fast or
-  slow/long-running**; whether it supports **parallel** runs; and any test database or fixtures
-  it needs.
+  slow/long-running**; and — always state this explicitly — whether **parallel** runs are
+  supported (name the tool, e.g. `--parallel` / paratest, or say "not configured"); plus any
+  test database or fixtures it needs.
 - **Run** — the dev server / app command and the port(s) it uses.
 
 ## Rules
@@ -57,7 +68,22 @@ is standard.
 - This becomes always-on context loaded every session — keep it lean and scannable; every line
   must earn its place.
 - Specifics (paths, names) over generalities.
-- If it is standard for the stack, omit it.
+- Write only facts true for EVERY contributor. Don't bake in your own machine's setup — a personal
+  dev server (Herd, Valet, Docker Desktop), personal paths, or OS-specific commands belong in your
+  local config, not shared project context. (These often leak in from a global `~/.claude/CLAUDE.md`
+  or `AGENTS.md` — ignore those for project context.) If setup genuinely differs by OS, point to
+  the README rather than hardcoding one path.
+- If it is standard for the stack, omit it — including framework-default config (a sync queue, the
+  default dev/serve port, the default cache driver). State a config value only where the project
+  overrides the stack default.
+- If `AGENTS.md` already carries house rules or conventions ANYWHERE in the file (an existing
+  house-rules section, the managed block, or an auto-generated block like Laravel Boost), do NOT
+  restate them. Make "Conventions that differ" a short curated INDEX — the 3–5 highest-signal
+  deviations, one line each, each pointing to where the full rule already lives — not a
+  re-derivation.
+- Describe the project's real commands, not the current contents of the ai-setup stub files
+  (`.ai-setup/precommit`, `.conductor/*`) — those get tuned right afterward, so any description of
+  them goes stale.
 - Do not touch the `<!-- ai-setup >>> ... <<< -->` block.
 
 ## After onboarding

@@ -1,5 +1,56 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git remote:*)",
+      "Bash(git fetch:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(pwd)",
+      "Bash(which:*)",
+      "Bash(echo:*)",
+      "Bash(find:*)",
+      "Bash(rg:*)",
+      "Bash(tree:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh repo view:*)"
+    ],
+    "deny": [
+      "Bash(git reset:*)",
+      "Bash(git stash:*)",
+      "Bash(git branch -d:*)",
+      "Bash(git branch -D:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git clean:*)",
+      "Bash(rm -rf:*)",
+      "Bash(sudo:*)",
+      "Bash(gh repo delete:*)",
+      "Bash(gh secret:*)",
+      "Bash(gh auth token:*)",
+      "Read(.env*)",
+      "Read(**/.env*)",
+      "Bash(cat .env*)"
+    ],
+    "ask": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ]
+  },
   "enabledPlugins": {
     "ralph-loop@claude-plugins-official": true,
     "superpowers@claude-plugins-official": true,
@@ -19,5 +70,18 @@
         "repo": "JuliusBrussee/caveman"
       }
     }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v rtk >/dev/null 2>&1; then rtk hook claude; fi"
+          }
+        ]
+      }
+    ]
   }
 }

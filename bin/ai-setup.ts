@@ -13,6 +13,7 @@ import {
 	select,
 } from "@clack/prompts";
 import { Command } from "commander";
+import { applyAgentTools, missingAgentTools } from "../src/agentTools.ts";
 import { install } from "../src/install.ts";
 import { installPackage, missingPackages } from "../src/packages.ts";
 import { REPO_ROOT } from "../src/paths.ts";
@@ -25,6 +26,7 @@ interface InitOptions {
 	projectOnly: boolean;
 	force: boolean;
 	packages: boolean;
+	agentTools: boolean;
 }
 
 const program = new Command();
@@ -51,6 +53,7 @@ program
 		false,
 	)
 	.option("--no-packages", "skip the curated per-stack package picker")
+	.option("--no-agent-tools", "skip the agent-tools picker (plugins/MCP/hooks)")
 	.action(async (targetArg: string, opts: InitOptions) => {
 		const target = resolve(targetArg);
 		if (!existsSync(target)) fail(`target '${targetArg}' does not exist`);
@@ -60,12 +63,22 @@ program
 			);
 		}
 
+		if (!opts.yes) {
+			intro("ai-setup");
+			note(
+				"Seeds cross-agent instructions (AGENTS.md) plus a Claude adapter and\n" +
+					"on-demand skills, a `commit` helper, and Conductor scaffolding — tailored\n" +
+					"to your stack and merged safely into files you already have.\n\n" +
+					"When it finishes, run /ai-setup in your agent to onboard the project.",
+				"What this does",
+			);
+		}
+
 		let stack = opts.stack;
 		if (!stack) {
 			if (opts.yes) fail("--yes requires --stack");
-			intro("ai-setup");
 			const choice = await select({
-				message: "Which stack?",
+				message: "Which stack is this project?",
 				options: listStacks().map((s) => {
 					const meta = stackMeta(s);
 					return { value: s, label: meta.label, hint: meta.description };
@@ -92,6 +105,7 @@ program
 
 		// Curated packages run last, after the file/tooling installs.
 		if (opts.packages !== false) await handlePackages(target, stack, opts);
+		if (opts.agentTools !== false) await handleAgentTools(target, stack, opts);
 
 		if (!opts.dryRun) {
 			note(
@@ -158,6 +172,48 @@ async function handlePackages(
 		if (!installPackage(target, p))
 			log.warn(`${p.name} install failed (non-zero exit)`);
 	}
+}
+
+/** Offer agent tools (plugins / MCP servers / hooks) not yet configured in the target. */
+async function handleAgentTools(
+	target: string,
+	stack: string,
+	opts: InitOptions,
+): Promise<void> {
+	const missing = missingAgentTools(target, stack);
+	if (missing.length === 0) return;
+
+	if (opts.dryRun) {
+		for (const t of missing)
+			console.log(`  would offer  ${t.name} (${t.type}) — ${t.description}`);
+		return;
+	}
+	// Non-interactive: auto-apply the recommended tools; skip the rest.
+	if (opts.yes || !process.stdout.isTTY) {
+		const recommended = missing.filter((t) => t.recommended);
+		if (recommended.length === 0) return;
+		applyAgentTools(target, recommended);
+		console.log(
+			`  configured ${recommended.length} recommended agent tool(s): ${recommended.map((t) => t.name).join(", ")}`,
+		);
+		return;
+	}
+
+	const selected = await multiselect({
+		message: "Agent tools to enable (space to toggle, enter to confirm):",
+		required: false,
+		initialValues: missing.filter((t) => t.recommended).map((t) => t.id),
+		options: missing.map((t) => ({
+			value: t.id,
+			label: t.name,
+			hint: t.description,
+		})),
+	});
+	if (isCancel(selected) || selected.length === 0) return;
+
+	const chosen = missing.filter((t) => selected.includes(t.id));
+	applyAgentTools(target, chosen);
+	for (const t of chosen) log.step(`enabled ${t.name}`);
 }
 
 function fail(msg: string): never {

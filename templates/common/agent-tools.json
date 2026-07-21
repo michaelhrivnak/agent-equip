@@ -1,0 +1,54 @@
+{
+  "tools": [
+    {
+      "id": "caveman",
+      "name": "Caveman",
+      "description": "Terse caveman-speak output mode (cuts tokens)",
+      "type": "plugin",
+      "recommended": true,
+      "plugin": "caveman@caveman",
+      "marketplace": {
+        "id": "caveman",
+        "source": { "source": "github", "repo": "JuliusBrussee/caveman" }
+      }
+    },
+    {
+      "id": "rtk",
+      "name": "rtk hook",
+      "description": "Guarded rtk PreToolUse/Bash hook (no-op if rtk not installed)",
+      "type": "hook",
+      "recommended": true,
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "command": "if command -v rtk >/dev/null 2>&1; then rtk hook claude; fi"
+    },
+    {
+      "id": "ralph-loop",
+      "name": "Ralph Loop",
+      "description": "Autonomous self-looping work sessions",
+      "type": "plugin",
+      "recommended": true,
+      "plugin": "ralph-loop@claude-plugins-official"
+    },
+    {
+      "id": "superpowers",
+      "name": "Superpowers",
+      "description": "Curated skill pack for common workflows",
+      "type": "plugin",
+      "recommended": true,
+      "plugin": "superpowers@claude-plugins-official"
+    },
+    {
+      "id": "codex",
+      "name": "Codex",
+      "description": "Hand hard tasks to OpenAI Codex as a second pass",
+      "type": "plugin",
+      "recommended": true,
+      "plugin": "codex@openai-codex",
+      "marketplace": {
+        "id": "openai-codex",
+        "source": { "source": "github", "repo": "openai/codex-plugin-cc" }
+      }
+    }
+  ]
+}
