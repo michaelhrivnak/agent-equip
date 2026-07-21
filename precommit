@@ -19,3 +19,5 @@ if [ -d node_modules ]; then
     echo "▶ prettier"
     npm run format
 fi
+
+#test
