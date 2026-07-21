@@ -1,0 +1,18 @@
+{
+	"packages": [
+		{
+			"id": "boost",
+			"name": "Laravel Boost",
+			"description": "MCP server + AI guidelines curated for Laravel",
+			"detect": { "file": "composer.json", "contains": "laravel/boost" },
+			"install": "composer require laravel/boost --dev"
+		},
+		{
+			"id": "larastan",
+			"name": "Larastan",
+			"description": "PHPStan static analysis for Laravel",
+			"detect": { "file": "composer.json", "contains": "larastan/larastan" },
+			"install": "composer require larastan/larastan --dev"
+		}
+	]
+}
