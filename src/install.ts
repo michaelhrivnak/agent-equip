@@ -31,7 +31,7 @@ export interface InstallReport {
 }
 
 // Stack metadata files — read by the installer, never seeded into the target.
-const METADATA = new Set(["packages.json", "stack.json"]);
+const METADATA = new Set(["packages.json", "stack.json", "agent-tools.json"]);
 
 // Relative paths that must be executable in the target.
 const EXECUTABLE = new Set([".ai-setup/precommit", ".conductor/setup.sh"]);
