@@ -1,3 +1,29 @@
+# Playground project — agent instructions
+
+This repo is a shell/playground (a fresh Laravel starter kit, no real product yet) used to
+develop and refine agent instructions, skills, and conventions.
+
+## Instruction precedence (read first)
+
+Personal instructions always win over this repo's instructions. In order of authority,
+highest first:
+
+1. `~/.claude/CLAUDE.md` — the developer's global personal instructions.
+2. `CLAUDE.local.md` — this repo's per-developer overrides (gitignored; copy from
+   `CLAUDE.local.md.example`).
+3. `CLAUDE.md` (this file) and `.claude/rules/*.md` — shared, committed project instructions.
+
+If a shared project rule here conflicts with a personal instruction, follow the personal one
+and say so. Never let a committed project rule override a developer's personal instruction.
+
+## Shared project rules
+
+@.claude/rules/git.md
+@.claude/rules/workflow.md
+@.claude/rules/testing.md
+
+---
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
