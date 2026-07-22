@@ -182,3 +182,37 @@ test("mergeMsbuild is idempotent: a second run adds nothing", () => {
 	expect(mergeMsbuild(src, dstPath)).toBe("merged-msbuild");
 	expect(mergeMsbuild(src, dstPath)).toBe("up-to-date");
 });
+
+test("mergeMsbuild adds a top-level element the target lacks (e.g. <Import>)", () => {
+	const src = join(ctx.target, "template.props");
+	const dstPath = join(ctx.target, "Directory.Build.props");
+	writeFileSync(
+		src,
+		`<Project>
+  <Import Project="common.props" />
+</Project>
+`,
+	);
+	writeFileSync(
+		dstPath,
+		`<Project>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>
+`,
+	);
+	expect(mergeMsbuild(src, dstPath)).toBe("merged-msbuild");
+	const out = readFileSync(dstPath, "utf8");
+	expect(out).toContain(`Import`); // template's top-level element added
+	expect(out).toContain("common.props");
+	expect(out).toContain("<Nullable>enable</Nullable>"); // target's own kept
+});
+
+test("mergeMsbuild is a byte-identical no-op and clears any stale reconcile copy", () => {
+	const { src, dstPath } = fixtures(TEMPLATE); // dst is byte-for-byte the template
+	writeFileSync(`${dstPath}.agent-equip-new`, "stale"); // leftover from a prior run
+	expect(mergeMsbuild(src, dstPath)).toBe("up-to-date");
+	expect(readFileSync(dstPath, "utf8")).toBe(TEMPLATE); // untouched
+	expect(existsSync(`${dstPath}.agent-equip-new`)).toBe(false); // cleared
+});

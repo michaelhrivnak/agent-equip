@@ -30,6 +30,7 @@
 		"build": "rm -rf dist && bun build bin/agent-equip.ts --target=node --outfile=dist/agent-equip.js --external @clack/prompts --external commander && chmod +x dist/agent-equip.js",
 		"prepublishOnly": "bun run build",
 		"test": "bun test",
+		"test:coverage": "bun test --coverage",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome lint --error-on-warnings ./bin ./src ./test",
 		"fix": "biome check --write ./bin ./src ./test"
