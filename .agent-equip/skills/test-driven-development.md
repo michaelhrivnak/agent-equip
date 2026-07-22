@@ -1,6 +1,6 @@
 ---
 name: test-driven-development
-description: Use when building NEW behavior — implementing a new function, method, endpoint, component, command, or feature where a test can express the intended behavior up front. Drives a red → green → refactor loop: write a failing test for the next slice of behavior, make it pass with the minimal code, then refactor with the test green. For changing or fixing EXISTING behavior, use the codifying-existing-behavior skill instead. Skip for throwaway spikes, pure config/generated code, UI/visual-only tweaks, and glue with no reasonable test seam.
+description: Use when building NEW behavior — implementing a new function, method, endpoint, component, command, or feature where a test can express the intended behavior up front. Drives a red → green → refactor loop — write a failing test for the next slice of behavior, make it pass with the minimal code, then refactor with the test green. For changing or fixing EXISTING behavior, use the codifying-existing-behavior skill instead. Skip for throwaway spikes, pure config/generated code, UI/visual-only tweaks, and glue with no reasonable test seam.
 ---
 
 <!-- managed by agent-equip — edit this file and it becomes yours (agent-equip then stops updating it); customize by adding your own skill alongside instead. -->
@@ -45,9 +45,9 @@ output / this effect). Don't infer the whole design from the name. One slice at 
 ## Procedure — red / green / refactor
 
 Match the project's own test framework and conventions (its runner, file layout, fixtures,
-assertions). Check `AGENTS.md` and neighboring tests first; if the layout is unclear, dispatch a
-read-only `Explore` subagent to find where and how tests are written. Do not impose a framework
-the project doesn't use.
+assertions). Check `AGENTS.md` and neighboring tests first; if the layout is unclear, search the test suite
+directly (or use a read-only subagent if your harness has one) to find where and how tests are
+written. Do not impose a framework the project doesn't use.
 
 ### 1. Red — write the failing test
 
@@ -85,6 +85,8 @@ The user can override at any time:
 - For a trivial one-liner with obvious behavior, use judgment and state the call: "This is a
   one-line pure helper — writing it and a single test together rather than strict red-first.
   Object?"
+
+When running unattended (CI, an autonomous workspace) with no user to answer, don't block on the scope question — state the first behavior you assumed and proceed, noting the assumption in your report.
 
 ## Tradeoff acknowledgment
 

@@ -1,6 +1,6 @@
 ---
 name: codifying-existing-behavior
-description: Use when modifying existing business logic — refactoring, fixing bugs, or changing the behavior of an existing function, method, service, module, class, handler, job, or endpoint. Mandates writing a test that codifies current behavior (or reproduces the bug) BEFORE touching production code. For bugs, the test starts red. For non-bug changes, the test starts green and stays green-with-new-assertions after the change. Skip for UI/visual tweaks, copy/comment/formatting changes, pure additions of new functions or classes, dependency bumps, and code with no reasonable test seam.
+description: Use when modifying existing business logic — refactoring, fixing bugs, or changing the behavior of an existing function, method, service, module, class, handler, job, or endpoint. Mandates writing a test that codifies current behavior (or reproduces the bug) BEFORE touching production code. For bugs, the test starts red. For non-bug changes, the test starts green and stays green after the change. Skip for UI/visual tweaks, copy/comment/formatting changes, pure additions of new functions or classes, dependency bumps, and code with no reasonable test seam.
 ---
 
 <!-- managed by agent-equip — edit this file and it becomes yours (agent-equip then stops updating it); customize by adding your own skill alongside instead. -->
@@ -38,11 +38,11 @@ If the request is vague ("refactor the payment service", "clean up that handler"
 
 ### Step 1 — Research existing coverage (subagent)
 
-Dispatch an `Explore` subagent (read-only, fast) with a self-contained prompt asking:
+Search the test suite for existing coverage — use a read-only subagent if your harness has one, otherwise search directly. Answer:
 - "Does any existing test exercise `<unit>` or the behavior `<short description>`?"
-- Let Explore find the project's test locations and layout — don't hardcode paths. Point it at
-  the test directory and any file matching the module or feature name.
-- Have it report: existing tests touching this code, coverage gaps for the specific behavior being changed, and the most natural file to extend (or "no covering test exists").
+- Find the project's test locations and layout — don't hardcode paths. Look under the test
+  directory and any file matching the module or feature name.
+- Report: existing tests touching this code, coverage gaps for the specific behavior being changed, and the most natural file to extend (or "no covering test exists").
 
 Wait for findings before writing a test. If coverage exists and is adequate, **extend the existing file**, do not create a parallel one.
 
@@ -84,6 +84,8 @@ The user can override at any time:
 - "skip the test, just fix it" / "no characterization needed" → skip cleanly, do not lecture.
 - "I'll write the test myself" → skip Steps 1–3, proceed to the change.
 - For one-line typo fixes / config tweaks even in business-logic files, use judgment and state the call: "This is a one-line constant change — skipping the characterization step. Object?"
+
+When running unattended (CI, an autonomous workspace) with no user to answer, don't block on the scope question or Step 3 approval — state the behavior you pinned and your assumptions explicitly in your report, then proceed.
 
 ## Tradeoff acknowledgment
 

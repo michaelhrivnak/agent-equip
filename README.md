@@ -117,8 +117,8 @@ Into the **target project**:
 - `AGENTS.md` — shared, cross-agent instructions assembled from the stack's rules (a managed
   `agent-equip` block; your own content is preserved).
 - `CLAUDE.md` — a thin adapter that imports `AGENTS.md` for Claude Code.
-- `.claude/` — Claude Code adapter: settings, slash commands, and native copies of the on-demand
-  skills (written only when Claude is a selected agent).
+- `.claude/` — Claude Code adapter: settings and slash commands (always shipped), plus native
+  copies of the on-demand skills (only when Claude is a selected agent).
 - `.agent-equip/skills/` — agent-agnostic skill bodies, referenced by the `AGENTS.md` **Skills
   index** so any agent (e.g. Codex) can load them on demand.
 - `.gitignore` — a managed `agent-equip` block for the files above.

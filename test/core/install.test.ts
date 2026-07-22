@@ -67,6 +67,16 @@ test("ships the new test-driven-development skill", () => {
 	).toBe(true);
 });
 
+test("ships the subagent-dispatch skill", () => {
+	install({ target: ctx.target, stack: "laravel", commitHelper: false });
+	expect(
+		existsSync(join(ctx.target, ".agent-equip/skills/subagent-dispatch.md")),
+	).toBe(true);
+	expect(
+		existsSync(join(ctx.target, ".claude/skills/subagent-dispatch/SKILL.md")),
+	).toBe(true);
+});
+
 test("AGENTS.md carries the skills index pointing at .agent-equip/skills", () => {
 	install({ target: ctx.target, stack: "laravel", commitHelper: false });
 	const agents = readFileSync(join(ctx.target, "AGENTS.md"), "utf8");
