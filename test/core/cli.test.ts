@@ -91,6 +91,36 @@ test("`update` reuses the installed stack/agents and reports up-to-date right af
 	expect(res.stdout).toContain("already up to date");
 });
 
+test("`update` still reports up-to-date when a permanently forked file exists (forked ≠ changed)", () => {
+	run(["init", target, "--stack", "laravel", "--project-only"]);
+	// Fork a whole-file managed file — it reports `forked` on every subsequent run.
+	writeFileSync(
+		join(target, ".agent-equip/precommit"),
+		"#!/bin/sh\necho mine\n",
+	);
+	const res = run(["update", target, "--project-only"]);
+	expect(res.code, res.stderr).toBe(0);
+	expect(res.stdout).toContain("already up to date");
+	expect(res.stdout).toContain("kept your local edits");
+});
+
+test("`update` rejects a manifest that lists an unknown agent", () => {
+	run(["init", target, "--stack", "laravel", "--project-only"]);
+	const mp = join(target, ".agent-equip/manifest.json");
+	const m = JSON.parse(readFileSync(mp, "utf8"));
+	m.agents = ["bogus"];
+	writeFileSync(mp, `${JSON.stringify(m, null, 2)}\n`);
+	const res = run(["update", target, "--project-only"]);
+	expect(res.code).toBe(1);
+	expect(res.stderr).toContain("unknown agent");
+});
+
+test("`update` refuses to run inside the agent-equip repo without --force", () => {
+	const res = run(["update", REPO_ROOT]);
+	expect(res.code).toBe(1);
+	expect(res.stderr).toContain("refusing to update agent-equip into itself");
+});
+
 test("`update` surfaces a hand-edited settings.json but preserves the edit", () => {
 	run(["init", target, "--stack", "laravel", "--project-only"]);
 	const sp = join(target, ".claude/settings.json");

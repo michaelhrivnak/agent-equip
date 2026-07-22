@@ -21,7 +21,12 @@ import {
 	install,
 	KNOWN_AGENTS,
 } from "../src/install.ts";
-import { loadManifest, manifestPath, restampFiles } from "../src/manifest.ts";
+import {
+	loadManifest,
+	type Manifest,
+	manifestPath,
+	restampFiles,
+} from "../src/manifest.ts";
 import { installPackage, missingPackages } from "../src/packages.ts";
 import { REPO_ROOT } from "../src/paths.ts";
 import { listStacks, stackExists, stackMeta } from "../src/templates.ts";
@@ -72,17 +77,7 @@ program
 	.option("--no-packages", "skip the curated per-stack package picker")
 	.option("--no-agent-tools", "skip the agent-tools picker (plugins/MCP/hooks)")
 	.action(async (targetArg: string, opts: InitOptions) => {
-		const target = resolve(targetArg);
-		if (!existsSync(target)) fail(`target '${targetArg}' does not exist`);
-		if (!statSync(target).isDirectory())
-			fail(`target '${targetArg}' is not a directory`);
-		if (!existsSync(join(target, ".git")))
-			console.error(`agent-equip: note: ${target} is not a git repository`);
-		if (target === REPO_ROOT && !opts.force) {
-			fail(
-				"refusing to install agent-equip into itself (pass --force to dogfood)",
-			);
-		}
+		const target = preflightTarget(targetArg, opts.force, "install");
 
 		if (!opts.yes) {
 			intro("agent-equip");
@@ -130,12 +125,15 @@ program
 
 		// Curated packages run last, after the file/tooling installs.
 		if (opts.packages !== false) await handlePackages(target, stack, opts);
-		if (opts.agentTools !== false) await handleAgentTools(target, stack, opts);
+		const toolsWrote =
+			opts.agentTools !== false
+				? await handleAgentTools(target, stack, opts)
+				: [];
 
-		// The agent-tools picker writes .claude/settings.json / .mcp.json AFTER install saved the
-		// manifest — re-stamp their hashes to the post-picker bytes so only later human edits diverge.
-		if (!opts.dryRun)
-			restampFiles(target, [".claude/settings.json", ".mcp.json"]);
+		// The agent-tools picker edits managed JSON (e.g. .claude/settings.json) AFTER install saved
+		// the manifest — re-stamp exactly what it wrote to the post-picker bytes, so only later human
+		// edits diverge. restampFiles ignores paths install didn't already track.
+		if (!opts.dryRun && toolsWrote.length) restampFiles(target, toolsWrote);
 
 		if (!opts.dryRun) {
 			note(
@@ -157,6 +155,7 @@ interface UpdateOptions {
 	stack?: string;
 	dryRun: boolean;
 	projectOnly: boolean;
+	force: boolean;
 }
 
 program
@@ -175,11 +174,13 @@ program
 		"seed project files only; skip the user-level commit helper",
 		false,
 	)
+	.option(
+		"--force",
+		"allow updating the agent-equip repo itself (dogfooding)",
+		false,
+	)
 	.action((targetArg: string, opts: UpdateOptions) => {
-		const target = resolve(targetArg);
-		if (!existsSync(target)) fail(`target '${targetArg}' does not exist`);
-		if (!statSync(target).isDirectory())
-			fail(`target '${targetArg}' is not a directory`);
+		const target = preflightTarget(targetArg, opts.force, "update");
 		if (!existsSync(manifestPath(target)))
 			fail("not installed here — run 'agent-equip init' first");
 
@@ -191,7 +192,7 @@ program
 			);
 		if (!stackExists(stack))
 			fail(`unknown stack '${stack}'. Available: ${listStacks().join(", ")}`);
-		const agents = manifest.agents ?? [...KNOWN_AGENTS];
+		const agents = resolveManifestAgents(manifest);
 		const from = manifest.version ? `v${manifest.version}` : "unknown";
 		console.error(`agent-equip: updating with agents: ${agents.join(", ")}`);
 
@@ -203,8 +204,11 @@ program
 			commitHelper: !opts.projectOnly,
 		});
 
-		const changed = report.files.filter((f) => f.outcome !== "up-to-date");
-		if (from === `v${report.version}` && changed.length === 0)
+		// "Refreshed nothing" = every file was already current OR is a fork/foreign file we leave
+		// alone. Only up-to-date + forked + new-written count as untouched.
+		const untouched = new Set(["up-to-date", "forked", "new-written"]);
+		const changed = report.files.some((f) => !untouched.has(f.outcome));
+		if (from === `v${report.version}` && !changed)
 			console.log(`  already up to date at v${report.version}`);
 		else console.log(`  ${from} → v${report.version}`);
 		printReport(report);
@@ -229,11 +233,59 @@ function printReport(report: InstallReport): void {
 		console.log(`  ${f.outcome.padEnd(12)} ${f.path}${hint}`);
 	}
 	console.log(`  ${report.commitHelper}`);
+	// "forked" spans whole files left untouched AND JSON that was safely re-merged (your values kept,
+	// new template keys added) — so "kept your edits", not "not overwritten".
 	const forked = report.files.filter((f) => f.outcome === "forked");
 	if (forked.length)
 		console.log(
-			`  kept your local edits (not overwritten): ${forked.map((f) => f.path).join(", ")}`,
+			`  kept your local edits: ${forked.map((f) => f.path).join(", ")}`,
 		);
+}
+
+/**
+ * Validate + normalize the target dir (shared by init/update): must exist and be a directory; warn
+ * if not a git repo; and refuse to run inside the agent-equip checkout itself unless `--force`
+ * (`verb` is "install"/"update" for the message). Returns the resolved absolute path.
+ */
+function preflightTarget(
+	targetArg: string,
+	force: boolean,
+	verb: string,
+): string {
+	const target = resolve(targetArg);
+	if (!existsSync(target)) fail(`target '${targetArg}' does not exist`);
+	if (!statSync(target).isDirectory())
+		fail(`target '${targetArg}' is not a directory`);
+	if (!existsSync(join(target, ".git")))
+		console.error(`agent-equip: note: ${target} is not a git repository`);
+	if (target === REPO_ROOT && !force)
+		fail(
+			`refusing to ${verb} agent-equip into itself (pass --force to dogfood)`,
+		);
+	return target;
+}
+
+/**
+ * The agent set for an `update`, from the manifest header. Explicit agents are validated against
+ * KNOWN_AGENTS (a typo shouldn't silently skip an adapter). A pre-versioned manifest has no header —
+ * infer from what was installed: Codex needs no per-agent files (it reads AGENTS.md) so it's always
+ * assumed, and Claude is added only if a `.claude/skills/` adapter was recorded.
+ */
+function resolveManifestAgents(manifest: Manifest): Agent[] {
+	if (manifest.agents) {
+		const unknown = manifest.agents.filter(
+			(a) => !(KNOWN_AGENTS as readonly string[]).includes(a),
+		);
+		if (unknown.length)
+			fail(
+				`manifest lists unknown agent(s): ${unknown.join(", ")}. Known: ${KNOWN_AGENTS.join(", ")}`,
+			);
+		return manifest.agents as Agent[];
+	}
+	const claude = Object.keys(manifest.files).some((k) =>
+		k.startsWith(".claude/skills/"),
+	);
+	return claude ? ["claude", "codex"] : ["codex"];
 }
 
 /** Offer to install the stack's curated packages that are missing from the target. */
@@ -282,19 +334,22 @@ async function handlePackages(
 	}
 }
 
-/** Offer agent tools (plugins / MCP servers / hooks) not yet configured in the target. */
+/**
+ * Offer agent tools (plugins / MCP servers / hooks) not yet configured in the target. Returns the
+ * target-relative paths the picker actually wrote (so the caller can re-stamp the manifest).
+ */
 async function handleAgentTools(
 	target: string,
 	stack: string,
 	opts: InitOptions,
-): Promise<void> {
+): Promise<string[]> {
 	const missing = missingAgentTools(target, stack);
-	if (missing.length === 0) return;
+	if (missing.length === 0) return [];
 
 	if (opts.dryRun) {
 		for (const t of missing)
 			console.log(`  would offer  ${t.name} (${t.type}) — ${t.description}`);
-		return;
+		return [];
 	}
 	// Non-interactive (--yes or piped): do NOT silently write third-party plugins/marketplaces
 	// into the target's committed config — just note they're available (matches the package picker).
@@ -302,7 +357,7 @@ async function handleAgentTools(
 		console.log(
 			`  ${missing.length} agent tool(s) available — run 'agent-equip init' interactively to enable them.`,
 		);
-		return;
+		return [];
 	}
 
 	const selected = await multiselect({
@@ -315,11 +370,12 @@ async function handleAgentTools(
 			hint: t.description,
 		})),
 	});
-	if (isCancel(selected) || selected.length === 0) return;
+	if (isCancel(selected) || selected.length === 0) return [];
 
 	const chosen = missing.filter((t) => selected.includes(t.id));
-	applyAgentTools(target, chosen);
+	const written = applyAgentTools(target, chosen);
 	for (const t of chosen) log.step(`enabled ${t.name}`);
+	return written;
 }
 
 /** Resolve which agents to target: explicit --agents, else prompt, else default to all. */

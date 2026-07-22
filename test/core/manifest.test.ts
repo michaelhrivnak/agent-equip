@@ -118,13 +118,23 @@ test("saveManifest writes the header and sorts the file keys", () => {
 	expect(Object.keys(m.files)).toEqual(["a.md", "b.md"]); // sorted
 });
 
-test("restampFiles records existing files' current bytes and skips absent ones", () => {
-	saveManifest(ctx.target, { files: {} });
-	const settings = join(ctx.target, ".claude/settings.json");
+test("restampFiles re-hashes only files already tracked; skips untracked and absent ones", () => {
+	// settings.json is already tracked (install recorded a stale hash); .mcp.json exists on disk but
+	// was never tracked; skills body is tracked but absent on disk.
+	saveManifest(ctx.target, {
+		files: {
+			".claude/settings.json": "stalehash",
+			".agent-equip/skills/x.md": "abc",
+		},
+	});
 	mkdirSync(join(ctx.target, ".claude"), { recursive: true });
-	writeFileSync(settings, "{}\n");
+	writeFileSync(join(ctx.target, ".claude/settings.json"), "{}\n");
+	writeFileSync(join(ctx.target, ".mcp.json"), '{"mcpServers":{}}\n');
+
 	restampFiles(ctx.target, [".claude/settings.json", ".mcp.json"]);
+
 	const m = loadManifest(ctx.target);
-	expect(m.files[".claude/settings.json"]).toBe(hash("{}\n"));
-	expect(m.files[".mcp.json"]).toBeUndefined(); // absent → skipped
+	expect(m.files[".claude/settings.json"]).toBe(hash("{}\n")); // tracked → re-stamped
+	expect(m.files[".mcp.json"]).toBeUndefined(); // untracked → never added
+	expect(m.files[".agent-equip/skills/x.md"]).toBe("abc"); // tracked but absent → left as-is
 });

@@ -1,6 +1,5 @@
 import {
 	chmodSync,
-	copyFileSync,
 	existsSync,
 	mkdirSync,
 	readFileSync,
@@ -183,8 +182,9 @@ function deepMerge(template: unknown, existing: unknown): unknown {
  * `hash` is the sha256 of the final bytes (recorded so a later `update` can tell pristine from
  * hand-edited). When `prevHash` is set and the current bytes no longer match it, the file was
  * hand-edited since agent-equip last wrote it — reported `forked` (surfaced as "kept yours") even
- * though the safe merge still runs. If the target is malformed JSON, never overwrite it — leave a
- * `${dst}.agent-equip-new` and record the fork sentinel. Idempotent.
+ * though the safe merge still runs. If the target is malformed JSON, never overwrite it: on first
+ * encounter leave a `${dst}.agent-equip-new` and record the fork sentinel, then stay silent on
+ * later runs (mirrors the whole-file foreign-file path so it never churns). Idempotent.
  */
 export function mergeJson(
 	src: string,
@@ -192,33 +192,36 @@ export function mergeJson(
 	prevHash: string | undefined,
 	dryRun = false,
 ): ManifestResult {
+	const srcBuf = readFileSync(src);
 	if (!existsSync(dst)) {
-		const srcBuf = readFileSync(src);
 		if (!dryRun) {
 			ensureDir(dst);
-			copyFileSync(src, dst);
+			writeFileSync(dst, srcBuf);
 		}
 		return { outcome: "created", hash: hash(srcBuf) };
 	}
 	const curBuf = readFileSync(dst);
-	if (readFileSync(src).equals(curBuf)) {
+	if (srcBuf.equals(curBuf)) {
 		if (!dryRun) clearArtifact(dst);
 		return { outcome: "up-to-date", hash: hash(curBuf) };
 	}
-	const current = curBuf.toString("utf8");
 	let existing: unknown;
 	try {
-		existing = JSON.parse(current);
+		existing = JSON.parse(curBuf.toString("utf8"));
 	} catch {
-		// Target is malformed — do not touch it; leave a reconcile copy.
-		if (!dryRun) copyFileSync(src, `${dst}.agent-equip-new`);
-		return { outcome: "new-written", hash: FORK_SENTINEL };
+		// Target is malformed — never overwrite. Drop a reconcile copy ONCE (first encounter), then
+		// go silent on later runs so it doesn't re-churn the *.agent-equip-new artifact every run.
+		if (prevHash === undefined) {
+			if (!dryRun) writeFileSync(`${dst}.agent-equip-new`, srcBuf);
+			return { outcome: "new-written", hash: FORK_SENTINEL };
+		}
+		return { outcome: "forked", hash: prevHash };
 	}
 	// Hand-edited since we last wrote it? The merge is still safe (existing wins) — surface it once.
 	const edited = prevHash !== undefined && hash(curBuf) !== prevHash;
-	const merged = deepMerge(JSON.parse(readFileSync(src, "utf8")), existing);
+	const merged = deepMerge(JSON.parse(srcBuf.toString("utf8")), existing);
 	const next = `${JSON.stringify(merged, null, 2)}\n`;
-	if (next === current) {
+	if (next === curBuf.toString("utf8")) {
 		if (!dryRun) clearArtifact(dst);
 		return { outcome: edited ? "forked" : "up-to-date", hash: hash(next) };
 	}

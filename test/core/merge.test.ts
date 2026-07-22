@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { hash } from "../../src/manifest.ts";
 import { mergeJson, mergeMsbuild } from "../../src/merge.ts";
@@ -52,6 +52,18 @@ test("mergeJson never overwrites malformed JSON; records the fork sentinel", () 
 	expect(r.hash).toBe("forked");
 	expect(readFileSync(dst, "utf8")).toBe("{bad"); // untouched
 	expect(existsSync(`${dst}.agent-equip-new`)).toBe(true);
+});
+
+test("mergeJson goes silent on a malformed target once the sentinel is recorded (no artifact churn)", () => {
+	const { src, dst } = jsonFixtures(`{"a":1}\n`, "{bad");
+	const first = mergeJson(src, dst, undefined);
+	expect(first.hash).toBe("forked");
+	rmSync(`${dst}.agent-equip-new`); // user reviews and removes the reconcile copy
+
+	const second = mergeJson(src, dst, first.hash); // sentinel is the prior hash now
+	expect(second.outcome).toBe("forked");
+	expect(second.hash).toBe("forked");
+	expect(existsSync(`${dst}.agent-equip-new`)).toBe(false); // NOT recreated
 });
 
 const TEMPLATE = `<Project>

@@ -57,8 +57,9 @@ actually used.
     persists `{version, stack, agents}` — and reports a `vX → vY` line plus the per-file outcomes.
   - The `AGENTS.md` managed-block marker carries the CLI version (`<!-- agent-equip >>> vX.Y.Z … -->`).
   - Forked files are surfaced in one flat "kept your local edits" list (no prose-vs-scaffold split).
-  - Manifest tracking extended to `.claude/settings.json` / `.mcp.json`: their post-picker hash is
-    recorded so only later human edits count as divergence (surfaced once, still deep-merged safely).
+  - Manifest tracking extended to template-seeded JSON (`.claude/settings.json`): its post-picker
+    hash is recorded so only later human edits count as divergence (surfaced once, still deep-merged
+    safely). Picker-only files that aren't templates (e.g. `.mcp.json`) stay untracked.
 - Live-verify & harden the permissions block ([#12](https://github.com/michaelhrivnak/agent-equip/issues/12))
 - Onboarding: handle monorepos / very large codebases ([#13](https://github.com/michaelhrivnak/agent-equip/issues/13))
 - Per-stack code hooks (`detect()`/`postInstall()`) ([#14](https://github.com/michaelhrivnak/agent-equip/issues/14))

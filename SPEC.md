@@ -131,8 +131,9 @@ run, non-destructively:
 
 - **Target absent** → copy the template (`created`).
 - **Target bytes == template** → `up-to-date`.
-- **Target is malformed JSON** → never overwrite; drop `<target>.agent-equip-new` beside it
-  (`new-written`, records the fork sentinel).
+- **Target is malformed JSON** → never overwrite. On first encounter (no prior manifest value) drop
+  `<target>.agent-equip-new` beside it (`new-written`, records the fork sentinel); on later runs stay
+  **silent** (`forked`, keep the prior value) so it never re-churns the artifact — mirrors §5.
 - **Otherwise** → deep-merge and write if the result changed (`merged-json`), else `up-to-date`.
 
 Merge rule: **existing values win.** For a key present in both, a scalar or array in the target is
@@ -142,10 +143,12 @@ introduces are added. Re-running is therefore safe and convergent.
 JSON files **are** manifest-tracked: the sha256 of the merged result is recorded. When the target's
 current bytes no longer match that recorded hash, it was **hand-edited** since agent-equip last wrote
 it — the outcome is reported `forked` (so `update` surfaces it as "kept your local edits") while the
-non-destructive deep-merge still runs. The agent-tools picker writes `.claude/settings.json` /
-`.mcp.json` *after* the install records the manifest, so those files' hashes are re-stamped to the
-post-picker bytes; only later human edits then count as divergence. Divergence is surfaced **once** —
-the merged bytes become the new recorded baseline.
+non-destructive deep-merge still runs. Divergence is surfaced **once** — the merged bytes become the
+new recorded baseline. Only template-seeded JSON (e.g. `.claude/settings.json`) is tracked this way.
+Because the agent-tools picker edits `settings.json` *after* the install records the manifest, that
+file's hash is re-stamped to the post-picker bytes — and re-stamping only touches paths the install
+already tracked, so a picker-only file that isn't a template (e.g. `.mcp.json`) never enters the
+manifest and is refreshed only by re-running the picker, not by `update`.
 
 ## 7. MSBuild merge
 

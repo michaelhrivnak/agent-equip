@@ -65,14 +65,17 @@ export function saveManifest(target: string, manifest: Manifest): void {
 
 /**
  * Re-hash `rels` from their current on-disk bytes and store them in the manifest. Used after the
- * agent-tools picker writes `.claude/settings.json` / `.mcp.json` — those files change AFTER the
- * install saved the manifest, so their recorded hash must be re-stamped to the post-picker bytes.
- * Absent files are skipped. No-op paths still round-trip safely (idempotent).
+ * agent-tools picker edits a managed JSON file (e.g. `.claude/settings.json`) — the file changes
+ * AFTER the install saved the manifest, so its recorded hash must be re-stamped to the post-picker
+ * bytes. Only files agent-equip **already tracks** are re-stamped: a path the install never recorded
+ * (a picker-only `.mcp.json`, a hand-authored file) is skipped, so a file agent-equip doesn't manage
+ * never sneaks into the manifest. Absent files are skipped too. Idempotent.
  */
 export function restampFiles(target: string, rels: string[]): void {
 	const manifest = loadManifest(target);
 	let changed = false;
 	for (const rel of rels) {
+		if (!(rel in manifest.files)) continue; // only re-stamp what install already tracks
 		const file = join(target, rel);
 		if (!existsSync(file)) continue;
 		manifest.files[rel] = hash(readFileSync(file));

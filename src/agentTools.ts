@@ -156,12 +156,19 @@ function applyHook(settings: Json, tool: AgentToolDef): void {
 /**
  * Apply selected tools into the target's JSON, merging with what's already there (object keys
  * merge; hooks array-union with dedup). If a target file exists but is malformed JSON, its tools
- * are skipped with a warning — the file is never overwritten. Writes only files actually touched.
+ * are skipped with a warning — the file is never overwritten. Writes only files actually touched,
+ * and returns their target-relative paths so the caller can re-stamp the manifest to the bytes the
+ * picker just wrote.
  */
-export function applyAgentTools(target: string, tools: AgentToolDef[]): void {
-	if (tools.length === 0) return;
-	const settingsPath = join(target, ".claude/settings.json");
-	const mcpPath = join(target, ".mcp.json");
+export function applyAgentTools(
+	target: string,
+	tools: AgentToolDef[],
+): string[] {
+	if (tools.length === 0) return [];
+	const settingsRel = ".claude/settings.json";
+	const mcpRel = ".mcp.json";
+	const settingsPath = join(target, settingsRel);
+	const mcpPath = join(target, mcpRel);
 	const settings = readJsonSafe(settingsPath);
 	const mcp = readJsonSafe(mcpPath);
 	let settingsDirty = false;
@@ -188,6 +195,14 @@ export function applyAgentTools(target: string, tools: AgentToolDef[]): void {
 		}
 	}
 
-	if (settingsDirty && settings) writeJson(settingsPath, settings);
-	if (mcpDirty && mcp) writeJson(mcpPath, mcp);
+	const written: string[] = [];
+	if (settingsDirty && settings) {
+		writeJson(settingsPath, settings);
+		written.push(settingsRel);
+	}
+	if (mcpDirty && mcp) {
+		writeJson(mcpPath, mcp);
+		written.push(mcpRel);
+	}
+	return written;
 }
