@@ -15,6 +15,10 @@
 # dogfood artifacts (this repo installs itself; *.agent-equip-new are install previews)
 *.agent-equip-new
 
+# stryker mutation testing (sandbox + reports)
+/.stryker-tmp
+/reports
+
 # agent-equip >>>
 /CLAUDE.local.md
 /.claude/settings.local.json

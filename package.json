@@ -31,6 +31,7 @@
 		"prepublishOnly": "bun run build",
 		"test": "bun test",
 		"test:coverage": "bun test --coverage",
+		"mutate": "stryker run",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome lint --error-on-warnings ./bin ./src ./test",
 		"fix": "biome check --write ./bin ./src ./test"
@@ -42,6 +43,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.5",
+		"@stryker-mutator/core": "^9.6.1",
 		"@types/bun": "latest",
 		"typescript": "^5.9.3"
 	}
