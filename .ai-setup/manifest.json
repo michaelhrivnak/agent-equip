@@ -1,0 +1,12 @@
+{
+  ".ai-setup/onboard.md": "a2e32f40892c627a46dd9814c7a0ac4f0f61261868b7072e04778fee1d6fa5f0",
+  ".ai-setup/precommit": "forked",
+  ".ai-setup/setup.md": "3862240d523b46b6adaf201c023a8e874551656ca2f9f756d5b9b20035959442",
+  ".claude/commands/ai-setup.md": "100caf6fee7ca6f5abc3178f1fa9045c322d76fc5520c1f24aee18aeab1aaec5",
+  ".claude/commands/onboard.md": "7f06d0edc5dfed95f3502b5b0691ff35d3885e75a83884dc7cd5bd61e3366116",
+  ".claude/skills/tune-conductor/SKILL.md": "e5e8d48d43454d91587a1966ab7da70a5a4d6c189e3e7a7588d0b2d1307d01a7",
+  ".claude/skills/tune-precommit/SKILL.md": "5e664f7e31114e46fd3c156f4204fdf9bddbbbb0f59feba70697284eacc61ed1",
+  ".conductor/settings.toml": "forked",
+  ".conductor/setup.sh": "fb56c319b11c33545887c9f0569c28b8308622a9c849e28359960d89b8ced1c1",
+  "CLAUDE.local.md.example": "f937375107af0c88b9416253dbaedbad7703a05f06c5824470c9ed8455058e62"
+}

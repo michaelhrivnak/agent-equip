@@ -4,83 +4,148 @@ import {
 	existsSync,
 	mkdirSync,
 	readFileSync,
+	rmSync,
+	statSync,
 	writeFileSync,
 } from "node:fs";
 import { dirname } from "node:path";
+import { hash } from "./manifest.ts";
 
 export type Outcome =
 	| "created"
 	| "updated"
 	| "up-to-date"
 	| "merged-json"
-	| "merged-claude"
-	| "new-written";
+	| "new-written"
+	| "forked";
 
 function ensureDir(file: string): void {
 	mkdirSync(dirname(file), { recursive: true });
 }
 
-function sameFile(a: string, b: string): boolean {
-	return existsSync(b) && readFileSync(a).equals(readFileSync(b));
+function sameFile(src: string, dst: string): boolean {
+	return existsSync(dst) && readFileSync(src).equals(readFileSync(dst));
 }
 
-/** Copy src -> dst only if dst is absent. If it exists and differs, leave a *.ai-setup-new copy. */
-export function copyIfAbsent(
+function isExecutable(file: string): boolean {
+	return (statSync(file).mode & 0o111) !== 0;
+}
+
+/** Remove a stale `${dst}.ai-setup-new` once the target no longer needs reconciling. */
+function clearArtifact(dst: string): void {
+	rmSync(`${dst}.ai-setup-new`, { force: true });
+}
+
+export interface ManifestResult {
+	outcome: Outcome;
+	/** sha to store in the manifest, or `undefined` when this file must not be tracked. */
+	hash?: string;
+}
+
+// Sentinel manifest value for a forked file. It can never equal a sha256 (64 hex chars), so the
+// pristine check never matches it — a forked file stays on the silent path across re-runs.
+export const FORK_SENTINEL = "forked";
+
+/**
+ * Whole-file "pristine tracks upstream, edited is yours", using the ownership manifest:
+ *  - dst absent                       → seed from template; record its hash.
+ *  - dst == template                  → up-to-date; record hash (clear any stale artifact).
+ *  - no prior hash + dst exists+differs → a pre-existing/foreign file: never overwrite, drop a
+ *                                        `${dst}.ai-setup-new` ONCE, and record the fork sentinel so
+ *                                        later runs take the silent forked path (no artifact churn).
+ *  - dst hash == prior hash (pristine) → refresh from the new template; record the new hash.
+ *  - otherwise (forked/sentinel)      → leave it untouched, silently; keep the prior manifest value.
+ * Executability derives from the SOURCE file's mode (so a stack stays pure data).
+ */
+export function manifestedCopy(
 	src: string,
 	dst: string,
-	opts: { executable?: boolean } = {},
-): Outcome {
-	if (existsSync(dst)) {
-		if (sameFile(src, dst)) return "up-to-date";
-		ensureDir(`${dst}.ai-setup-new`);
-		copyFileSync(src, `${dst}.ai-setup-new`);
-		if (opts.executable) chmodSync(`${dst}.ai-setup-new`, 0o755);
-		return "new-written";
+	prevHash: string | undefined,
+	dryRun = false,
+): ManifestResult {
+	const srcBuf = readFileSync(src);
+	const exec = isExecutable(src);
+	const seed = (): void => {
+		ensureDir(dst);
+		writeFileSync(dst, srcBuf);
+		if (exec) chmodSync(dst, 0o755);
+		clearArtifact(dst);
+	};
+
+	if (!existsSync(dst)) {
+		if (!dryRun) seed();
+		return { outcome: "created", hash: hash(srcBuf) };
 	}
-	ensureDir(dst);
-	copyFileSync(src, dst);
-	if (opts.executable) chmodSync(dst, 0o755);
-	return "created";
+	const curBuf = readFileSync(dst);
+	if (curBuf.equals(srcBuf)) {
+		if (!dryRun) {
+			if (exec) chmodSync(dst, 0o755);
+			clearArtifact(dst);
+		}
+		return { outcome: "up-to-date", hash: hash(srcBuf) };
+	}
+	if (prevHash === undefined) {
+		if (!dryRun) {
+			ensureDir(`${dst}.ai-setup-new`);
+			writeFileSync(`${dst}.ai-setup-new`, srcBuf);
+			if (exec) chmodSync(`${dst}.ai-setup-new`, 0o755);
+		}
+		return { outcome: "new-written", hash: FORK_SENTINEL };
+	}
+	if (hash(curBuf) === prevHash) {
+		if (!dryRun) seed();
+		return { outcome: "updated", hash: hash(srcBuf) };
+	}
+	return { outcome: "forked", hash: prevHash };
 }
 
 /**
- * Remove a start..end block (inclusive) from text, keeping everything else. Markers are matched
- * only when a line *starts* with them (after leading whitespace), so prose that merely mentions
- * the marker string mid-line is not mistaken for a real block boundary.
+ * Remove EVERY well-formed start..end block (inclusive) from text, so a file that somehow carries
+ * duplicate managed blocks converges to one on re-install. Strips ONLY complete blocks (a start
+ * with a later end) — a missing/typo'd marker leaves content intact rather than deleting to EOF.
+ * Markers match only at the start of a line (after leading space).
  */
 function stripBlock(text: string, start: string, end: string): string {
-	const out: string[] = [];
-	let drop = false;
-	for (const line of text.split("\n")) {
-		const trimmed = line.trimStart();
-		if (trimmed.startsWith(start)) drop = true;
-		if (!drop) out.push(line);
-		if (trimmed.startsWith(end)) drop = false;
+	const lines = text.split("\n");
+	let removed = true;
+	while (removed) {
+		removed = false;
+		let startIdx = -1;
+		for (let i = 0; i < lines.length; i++) {
+			const trimmed = lines[i].trimStart();
+			if (startIdx === -1) {
+				if (trimmed.startsWith(start)) startIdx = i;
+			} else if (trimmed.startsWith(end)) {
+				lines.splice(startIdx, i - startIdx + 1);
+				removed = true;
+				break;
+			}
+		}
 	}
-	return out.join("\n");
+	return lines.join("\n");
 }
 
-/**
- * Insert/refresh a marked block (given as content, markers included) in a file — create,
- * append, or replace in place. Idempotent.
- */
+/** Insert/refresh a marked block (content includes the markers). Idempotent. */
 export function ensureBlock(
 	dst: string,
 	block: string,
 	start: string,
 	end: string,
+	dryRun = false,
 ): Outcome {
 	const content = block.endsWith("\n") ? block : `${block}\n`;
 	if (!existsSync(dst)) {
-		ensureDir(dst);
-		writeFileSync(dst, content);
+		if (!dryRun) {
+			ensureDir(dst);
+			writeFileSync(dst, content);
+		}
 		return "created";
 	}
 	const current = readFileSync(dst, "utf8");
 	const kept = stripBlock(current, start, end).replace(/\n+$/, "");
 	const next = kept.length ? `${kept}\n\n${content}` : content;
 	if (next === current) return "up-to-date";
-	writeFileSync(dst, next);
+	if (!dryRun) writeFileSync(dst, next);
 	return "updated";
 }
 
@@ -88,61 +153,55 @@ function isObject(x: unknown): x is Record<string, unknown> {
 	return typeof x === "object" && x !== null && !Array.isArray(x);
 }
 
-/** Recursive object merge where `over` wins on conflicts; `base` fills in missing keys. */
-function deepMerge(base: unknown, over: unknown): unknown {
-	if (!isObject(base) || !isObject(over))
-		return over === undefined ? base : over;
-	const out: Record<string, unknown> = { ...base };
-	for (const key of Object.keys(over)) {
+/**
+ * Deep-merge template JSON into the target on EVERY run: the target's existing values win (scalars
+ * and arrays alike — a key the user set is left as-is), objects merge recursively, and keys the
+ * template introduces are added. Non-destructive, so re-running is safe. JSON (e.g. settings.json)
+ * is not manifest-tracked today — full pristine/fork tracking for it is ROADMAP M4.
+ */
+function deepMerge(template: unknown, existing: unknown): unknown {
+	if (!isObject(template) || !isObject(existing))
+		return existing === undefined ? template : existing;
+	const out: Record<string, unknown> = { ...template };
+	for (const key of Object.keys(existing)) {
 		out[key] =
-			key in base && isObject(base[key]) && isObject(over[key])
-				? deepMerge(base[key], over[key])
-				: over[key];
+			key in template ? deepMerge(template[key], existing[key]) : existing[key];
 	}
 	return out;
 }
 
-/** Deep-merge template JSON into the target's, with the target's existing values winning. */
-export function mergeJson(src: string, dst: string): Outcome {
+/**
+ * Deep-merge template JSON into the target's (existing values win; arrays union). If the target
+ * is malformed JSON, never overwrite it — leave a `${dst}.ai-setup-new` instead. Idempotent: an
+ * unchanged result is reported up-to-date without rewriting.
+ */
+export function mergeJson(src: string, dst: string, dryRun = false): Outcome {
 	if (!existsSync(dst)) {
-		ensureDir(dst);
-		copyFileSync(src, dst);
+		if (!dryRun) {
+			ensureDir(dst);
+			copyFileSync(src, dst);
+		}
 		return "created";
 	}
-	if (sameFile(src, dst)) return "up-to-date";
-	const merged = deepMerge(
-		JSON.parse(readFileSync(src, "utf8")),
-		JSON.parse(readFileSync(dst, "utf8")),
-	);
-	writeFileSync(dst, `${JSON.stringify(merged, null, 2)}\n`);
+	if (sameFile(src, dst)) {
+		if (!dryRun) clearArtifact(dst);
+		return "up-to-date";
+	}
+	const current = readFileSync(dst, "utf8");
+	let existing: unknown;
+	try {
+		existing = JSON.parse(current);
+	} catch {
+		// Target is malformed — do not touch it; leave a reconcile copy.
+		if (!dryRun) copyFileSync(src, `${dst}.ai-setup-new`);
+		return "new-written";
+	}
+	const merged = deepMerge(JSON.parse(readFileSync(src, "utf8")), existing);
+	const next = `${JSON.stringify(merged, null, 2)}\n`;
+	if (next === current) {
+		if (!dryRun) clearArtifact(dst);
+		return "up-to-date";
+	}
+	if (!dryRun) writeFileSync(dst, next);
 	return "merged-json";
-}
-
-/** Best-effort merge via the Claude CLI. Overwrites dst with the merged result. */
-export function claudeMerge(dst: string, src: string): boolean {
-	if (!Bun.which("claude")) return false;
-	const prompt =
-		"Merge the TEMPLATE config into the EXISTING config file and print ONLY the full merged " +
-		"file contents — no explanation, no code fences. Preserve the existing file's values on any " +
-		`conflict; add whatever the template has that is missing.\n\nEXISTING:\n${readFileSync(dst, "utf8")}\n\n` +
-		`TEMPLATE:\n${readFileSync(src, "utf8")}\n`;
-	const res = Bun.spawnSync(["claude", "-p", prompt]);
-	if (res.exitCode !== 0) return false;
-	const out = res.stdout.toString().trim();
-	if (!out) return false;
-	writeFileSync(dst, `${out}\n`);
-	return true;
-}
-
-/** For structured files jq-style merging can't handle (e.g. TOML): claude if available, else *.ai-setup-new. */
-export function mergeStructured(src: string, dst: string): Outcome {
-	if (!existsSync(dst)) {
-		ensureDir(dst);
-		copyFileSync(src, dst);
-		return "created";
-	}
-	if (sameFile(src, dst)) return "up-to-date";
-	if (claudeMerge(dst, src)) return "merged-claude";
-	copyFileSync(src, `${dst}.ai-setup-new`);
-	return "new-written";
 }

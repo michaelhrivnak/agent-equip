@@ -19,8 +19,6 @@
       "Bash(wc:*)",
       "Bash(pwd)",
       "Bash(which:*)",
-      "Bash(echo:*)",
-      "Bash(find:*)",
       "Bash(rg:*)",
       "Bash(tree:*)",
       "Bash(gh pr view:*)",
@@ -44,7 +42,12 @@
       "Bash(gh auth token:*)",
       "Read(.env*)",
       "Read(**/.env*)",
-      "Bash(cat .env*)"
+      "Bash(cat .env*)",
+      "Bash(cat ./.env*)",
+      "Bash(head .env*)",
+      "Bash(head ./.env*)",
+      "Bash(tail .env*)",
+      "Bash(tail ./.env*)"
     ],
     "ask": [
       "Bash(git commit:*)",

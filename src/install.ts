@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { installCommitHelper } from "./commitHelper.ts";
+import { loadManifest, type Manifest, saveManifest } from "./manifest.ts";
 import {
-	copyIfAbsent,
 	ensureBlock,
+	manifestedCopy,
 	mergeJson,
-	mergeStructured,
 	type Outcome,
 } from "./merge.ts";
 import { assembleAgents, composeFiles } from "./templates.ts";
@@ -20,7 +20,7 @@ export interface InstallOptions {
 
 export interface FileAction {
 	path: string;
-	outcome: Outcome | "would-write";
+	outcome: Outcome;
 }
 
 export interface InstallReport {
@@ -32,9 +32,6 @@ export interface InstallReport {
 
 // Stack metadata files — read by the installer, never seeded into the target.
 const METADATA = new Set(["packages.json", "stack.json", "agent-tools.json"]);
-
-// Relative paths that must be executable in the target.
-const EXECUTABLE = new Set([".ai-setup/precommit", ".conductor/setup.sh"]);
 
 // Source files whose target path differs from their name.
 const RENAMES: Record<string, string> = { "gitignore.snippet": ".gitignore" };
@@ -55,7 +52,20 @@ export function strategyFor(rel: string): MergeKind {
 	return "copy";
 }
 
-function applyStrategy(rel: string, src: string, dst: string): Outcome {
+/**
+ * Apply one composed file to the target. Marked-block files refresh their block in place; JSON is
+ * deep-merged on first encounter; every other whole file (prompts, skills, commands, precommit,
+ * TOML, …) is routed through the ownership manifest ("pristine tracks upstream, edited is yours").
+ * Records the manifest hash for manifest-managed files into `next`.
+ */
+function applyStrategy(
+	rel: string,
+	src: string,
+	dst: string,
+	dryRun: boolean,
+	prev: Manifest,
+	next: Manifest,
+): Outcome {
 	switch (strategyFor(rel)) {
 		case "claude-md":
 			return ensureBlock(
@@ -63,6 +73,7 @@ function applyStrategy(rel: string, src: string, dst: string): Outcome {
 				readFileSync(src, "utf8"),
 				"<!-- ai-setup >>>",
 				"<!-- ai-setup <<< -->",
+				dryRun,
 			);
 		case "gitignore":
 			return ensureBlock(
@@ -70,20 +81,25 @@ function applyStrategy(rel: string, src: string, dst: string): Outcome {
 				readFileSync(src, "utf8"),
 				"# ai-setup >>>",
 				"# ai-setup <<<",
+				dryRun,
 			);
 		case "json":
-			return mergeJson(src, dst);
-		case "toml":
-			return mergeStructured(src, dst);
-		default:
-			return copyIfAbsent(src, dst, { executable: EXECUTABLE.has(rel) });
+			return mergeJson(src, dst, dryRun);
+		default: {
+			// copy + toml: whole-file, manifest-owned.
+			const result = manifestedCopy(src, dst, prev[rel], dryRun);
+			if (result.hash !== undefined) next[rel] = result.hash;
+			return result.outcome;
+		}
 	}
 }
 
 /** Seed the composed common+stack template into the target project. */
 export function install(opts: InstallOptions): InstallReport {
-	const { target, stack, dryRun, commitHelper = true } = opts;
+	const { target, stack, dryRun = false, commitHelper = true } = opts;
 	const files: FileAction[] = [];
+	const prev = loadManifest(target);
+	const next: Manifest = {};
 
 	const entries = [...composeFiles(stack).entries()].sort((a, b) =>
 		a[0].localeCompare(b[0]),
@@ -93,28 +109,33 @@ export function install(opts: InstallOptions): InstallReport {
 		// rules/*.md are assembled into AGENTS.md, not seeded as individual files.
 		if (rel.startsWith("rules/")) continue;
 		const targetRel = RENAMES[rel] ?? rel;
-		if (dryRun) {
-			files.push({ path: targetRel, outcome: "would-write" });
-			continue;
-		}
 		files.push({
 			path: targetRel,
-			outcome: applyStrategy(targetRel, src, join(target, targetRel)),
+			outcome: applyStrategy(
+				targetRel,
+				src,
+				join(target, targetRel),
+				dryRun,
+				prev,
+				next,
+			),
 		});
 	}
 
 	// AGENTS.md — canonical, cross-agent instructions assembled from the rules fragments.
 	files.push({
 		path: "AGENTS.md",
-		outcome: dryRun
-			? "would-write"
-			: ensureBlock(
-					join(target, "AGENTS.md"),
-					assembleAgents(stack),
-					"<!-- ai-setup >>>",
-					"<!-- ai-setup <<< -->",
-				),
+		outcome: ensureBlock(
+			join(target, "AGENTS.md"),
+			assembleAgents(stack),
+			"<!-- ai-setup >>>",
+			"<!-- ai-setup <<< -->",
+			dryRun,
+		),
 	});
+
+	// Record what ai-setup wrote, so the next run can tell pristine files from forked ones.
+	if (!dryRun) saveManifest(target, next);
 
 	const commitHelperMsg = commitHelper
 		? installCommitHelper(dryRun)

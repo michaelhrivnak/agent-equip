@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, statSync } from "node:fs";
+import { join, resolve } from "node:path";
 import {
 	cancel,
 	confirm,
@@ -57,6 +57,10 @@ program
 	.action(async (targetArg: string, opts: InitOptions) => {
 		const target = resolve(targetArg);
 		if (!existsSync(target)) fail(`target '${targetArg}' does not exist`);
+		if (!statSync(target).isDirectory())
+			fail(`target '${targetArg}' is not a directory`);
+		if (!existsSync(join(target, ".git")))
+			console.error(`ai-setup: note: ${target} is not a git repository`);
 		if (target === REPO_ROOT && !opts.force) {
 			fail(
 				"refusing to install ai-setup into itself (pass --force to dogfood)",
@@ -77,6 +81,8 @@ program
 		let stack = opts.stack;
 		if (!stack) {
 			if (opts.yes) fail("--yes requires --stack");
+			if (!process.stdout.isTTY)
+				fail("non-interactive: pass --stack (and optionally --yes)");
 			const choice = await select({
 				message: "Which stack is this project?",
 				options: listStacks().map((s) => {
@@ -99,8 +105,11 @@ program
 			dryRun: opts.dryRun,
 			commitHelper: !opts.projectOnly,
 		});
-		for (const f of report.files)
-			console.log(`  ${f.outcome.padEnd(12)} ${f.path}`);
+		for (const f of report.files) {
+			const hint =
+				f.outcome === "new-written" ? `  → review ${f.path}.ai-setup-new` : "";
+			console.log(`  ${f.outcome.padEnd(12)} ${f.path}${hint}`);
+		}
 		console.log(`  ${report.commitHelper}`);
 
 		// Curated packages run last, after the file/tooling installs.
@@ -188,13 +197,11 @@ async function handleAgentTools(
 			console.log(`  would offer  ${t.name} (${t.type}) — ${t.description}`);
 		return;
 	}
-	// Non-interactive: auto-apply the recommended tools; skip the rest.
+	// Non-interactive (--yes or piped): do NOT silently write third-party plugins/marketplaces
+	// into the target's committed config — just note they're available (matches the package picker).
 	if (opts.yes || !process.stdout.isTTY) {
-		const recommended = missing.filter((t) => t.recommended);
-		if (recommended.length === 0) return;
-		applyAgentTools(target, recommended);
 		console.log(
-			`  configured ${recommended.length} recommended agent tool(s): ${recommended.map((t) => t.name).join(", ")}`,
+			`  ${missing.length} agent tool(s) available — run 'ai-setup init' interactively to enable them.`,
 		);
 		return;
 	}

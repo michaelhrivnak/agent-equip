@@ -8,11 +8,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Test the documented floor (README: Bun v1.3+) and the latest release.
+        bun-version: ["1.3.0", latest]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: ${{ matrix.bun-version }}
       - run: bun install --frozen-lockfile
       - run: bun run lint
       - run: bun run typecheck

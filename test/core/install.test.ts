@@ -160,13 +160,15 @@ test("--project-only skips the commit helper", () => {
 	expect(existsSync(join(ctx.home, ".bashrc"))).toBe(false);
 });
 
-test("dry run writes nothing", () => {
+test("dry run reports real outcomes but writes nothing", () => {
 	const report = install({
 		target: ctx.target,
 		stack: "laravel",
 		dryRun: true,
 	});
-	expect(report.files.every((f) => f.outcome === "would-write")).toBe(true);
+	// Fresh target → every file would be "created" (a real diff, not a blanket "would-write").
+	expect(report.files.every((f) => f.outcome === "created")).toBe(true);
+	expect(existsSync(join(ctx.target, "AGENTS.md"))).toBe(false);
 	expect(existsSync(join(ctx.target, "CLAUDE.md"))).toBe(false);
 	expect(existsSync(join(ctx.home, ".zshrc"))).toBe(false);
 });

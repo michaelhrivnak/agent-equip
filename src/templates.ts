@@ -1,6 +1,11 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
-import { TEMPLATES_DIR } from "./paths.ts";
+import { readFileSync } from "node:fs";
+import {
+	layerFiles,
+	readTemplateFile,
+	templateFilePath,
+	templateLayerExists,
+	templateLayers,
+} from "./assets.ts";
 
 export const COMMON = "common";
 
@@ -12,42 +17,33 @@ export interface StackMeta {
 
 /** Display metadata for a stack from templates/<stack>/stack.json (falls back to the name). */
 export function stackMeta(stack: string): StackMeta {
-	const file = join(TEMPLATES_DIR, stack, "stack.json");
-	if (existsSync(file)) {
-		const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<StackMeta>;
+	const fallback = { name: stack, label: stack, description: "" };
+	const raw = readTemplateFile(stack, "stack.json");
+	if (raw === null) return fallback;
+	try {
+		const parsed = JSON.parse(raw) as Partial<StackMeta>;
 		return {
 			name: stack,
 			label: parsed.label ?? stack,
 			description: parsed.description ?? "",
 		};
+	} catch {
+		console.warn(
+			`ai-setup: templates/${stack}/stack.json is not valid JSON — using the stack name.`,
+		);
+		return fallback;
 	}
-	return { name: stack, label: stack, description: "" };
 }
 
 /** Stack names available under templates/ (everything except the shared `common` layer). */
 export function listStacks(): string[] {
-	return readdirSync(TEMPLATES_DIR)
-		.filter(
-			(name) =>
-				name !== COMMON && statSync(join(TEMPLATES_DIR, name)).isDirectory(),
-		)
+	return templateLayers()
+		.filter((name) => name !== COMMON)
 		.sort();
 }
 
 export function stackExists(stack: string): boolean {
-	const dir = join(TEMPLATES_DIR, stack);
-	return stack !== COMMON && existsSync(dir) && statSync(dir).isDirectory();
-}
-
-/** Files under `dir`, as paths relative to it. */
-function walk(dir: string, base = dir): string[] {
-	const out: string[] = [];
-	for (const entry of readdirSync(dir)) {
-		const full = join(dir, entry);
-		if (statSync(full).isDirectory()) out.push(...walk(full, base));
-		else out.push(relative(base, full));
-	}
-	return out;
+	return stack !== COMMON && templateLayerExists(stack);
 }
 
 /**
@@ -57,9 +53,8 @@ function walk(dir: string, base = dir): string[] {
 export function composeFiles(stack: string): Map<string, string> {
 	const files = new Map<string, string>();
 	for (const layer of [COMMON, stack]) {
-		const layerDir = join(TEMPLATES_DIR, layer);
-		if (!existsSync(layerDir)) continue;
-		for (const rel of walk(layerDir)) files.set(rel, join(layerDir, rel));
+		for (const rel of layerFiles(layer))
+			files.set(rel, templateFilePath(layer, rel));
 	}
 	return files;
 }
