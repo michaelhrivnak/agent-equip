@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#
+# Project pre-commit checks. The `commit` shell helper runs this from the repo root before
+# committing — it is NOT a git hook. Format and lint here; the commit helper stages whatever this
+# changes afterward. Exit non-zero to abort. Guard each step so it no-ops when its tool/script is
+# missing (stock Laravel has no JS lint/format scripts).
+set -euo pipefail
+
+if [ -x vendor/bin/pint ]; then
+    echo "▶ pint"
+    vendor/bin/pint --dirty
+fi
+
+if [ -f package.json ]; then
+    # --if-present: silently skip when the script isn't defined.
+    npm run --if-present lint
+    npm run --if-present format
+fi

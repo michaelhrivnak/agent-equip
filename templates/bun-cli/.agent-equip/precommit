@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+#
+# Pre-commit checks for a Bun/TypeScript project. The `commit` helper runs this before
+# committing and stages the results. Exit non-zero to abort. Adjust to your package.json scripts.
+set -euo pipefail
+
+if [ -f package.json ]; then
+    # Write-mode format first so fixes get staged; --if-present no-ops when there's no `fix` script.
+    echo "▶ fix";       bun run --if-present fix
+    echo "▶ lint";      bun run lint
+    echo "▶ typecheck"; bun run typecheck
+    echo "▶ test";      bun test
+fi

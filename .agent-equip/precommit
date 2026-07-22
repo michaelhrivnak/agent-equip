@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#
+# Pre-commit checks for the agent-equip repo itself. Auto-fixes (Biome format + safe lint fixes)
+# so the fixes get staged, then typechecks and tests. Customized from the bun-cli template's
+# check-only stub.
+set -euo pipefail
+
+echo "▶ fix";       bun run fix
+echo "▶ typecheck"; bun run typecheck
+echo "▶ test";      bun test

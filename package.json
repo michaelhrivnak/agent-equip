@@ -1,0 +1,36 @@
+{
+	"name": "agent-equip",
+	"version": "0.0.1",
+	"description": "Quickstart installer that seeds AI-development tooling into projects, per stack",
+	"license": "MIT",
+	"author": "Michael Hrivnak",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/michaelhrivnak/agent-equip.git"
+	},
+	"homepage": "https://github.com/michaelhrivnak/agent-equip#readme",
+	"bugs": {
+		"url": "https://github.com/michaelhrivnak/agent-equip/issues"
+	},
+	"type": "module",
+	"files": ["bin/", "src/", "templates/", "assets/"],
+	"bin": {
+		"agent-equip": "bin/agent-equip.ts"
+	},
+	"scripts": {
+		"start": "bun run bin/agent-equip.ts",
+		"test": "bun test",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome lint --error-on-warnings ./bin ./src ./test",
+		"fix": "biome check --write ./bin ./src ./test"
+	},
+	"dependencies": {
+		"@clack/prompts": "^0.11.0",
+		"commander": "^14.0.1"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.5",
+		"@types/bun": "latest",
+		"typescript": "^5.9.3"
+	}
+}
