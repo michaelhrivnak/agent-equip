@@ -1,6 +1,6 @@
 {
 	"name": "agent-equip",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"description": "Quickstart installer that seeds AI-development tooling into projects, per stack",
 	"license": "MIT",
 	"author": "Michael Hrivnak",
