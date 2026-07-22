@@ -49,7 +49,7 @@ Pick by what you want to exercise: seed vs merge, CPM vs non-CPM, small vs large
 
 4. **Analyze each file outcome.**
    - `created` — new file seeded. Confirm it landed and (for scripts) is executable.
-   - `merged-json` / `merged-xml` — `git -C <target> diff -- <file>`. Verify the project's **own
+   - `merged-json` / `merged-msbuild` — `git -C <target> diff -- <file>`. Verify the project's **own
      values survived** and only **additive** template nodes appear. Any overwritten user value is a
      bug — flag it loudly.
    - `up-to-date` — no change; fine.
