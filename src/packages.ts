@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { TEMPLATES_DIR } from "./paths.ts";
+import { readTemplateFile } from "./assets.ts";
 
 export interface PackageDef {
 	id: string;
@@ -14,12 +14,17 @@ export interface PackageDef {
 
 /** Curated packages a stack declares in templates/<stack>/packages.json (or [] if none). */
 export function loadPackages(stack: string): PackageDef[] {
-	const manifest = join(TEMPLATES_DIR, stack, "packages.json");
-	if (!existsSync(manifest)) return [];
-	const parsed = JSON.parse(readFileSync(manifest, "utf8")) as {
-		packages?: PackageDef[];
-	};
-	return parsed.packages ?? [];
+	const raw = readTemplateFile(stack, "packages.json");
+	if (raw === null) return [];
+	try {
+		const parsed = JSON.parse(raw) as { packages?: PackageDef[] };
+		return parsed.packages ?? [];
+	} catch {
+		console.warn(
+			`ai-setup: templates/${stack}/packages.json is not valid JSON — ignoring it.`,
+		);
+		return [];
+	}
 }
 
 /** Is a curated package already present in the target project? */

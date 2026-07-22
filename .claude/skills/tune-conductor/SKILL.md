@@ -1,7 +1,9 @@
 ---
 name: tune-conductor
-description: Use when setting up or editing a project's Conductor files installed by ai-setup — `.conductor/setup.sh` (runs when a new Conductor workspace/worktree is created) and `.conductor/settings.toml` (setup command, run scripts, run mode). Trigger when configuring Conductor for the project, editing `.conductor/setup.sh` or `.conductor/settings.toml`, wiring dev/test/worker run scripts, deciding concurrent vs nonconcurrent, handling ports/DB for parallel workspaces, or right after onboarding a project with ai-setup. For deep Conductor reference also use the `conductor` skill.
+description: Use when setting up or editing a project's Conductor files installed by ai-setup — `.conductor/setup.sh` (runs when a new Conductor workspace/worktree is created) and `.conductor/settings.toml` (setup command, run scripts, run mode). Trigger when configuring Conductor for the project, editing `.conductor/setup.sh` or `.conductor/settings.toml`, wiring dev/test/worker run scripts, deciding concurrent vs nonconcurrent, handling ports/DB for parallel workspaces, or right after onboarding a project with ai-setup. For deep Conductor reference see https://conductor.build/docs.
 ---
+
+<!-- managed by ai-setup — edit this file and it becomes yours (ai-setup then stops updating it); customize by adding your own skill alongside instead. -->
 
 # Tune the Conductor setup
 
@@ -40,4 +42,4 @@ workspace its own DB/state where possible. If the project genuinely can't be mad
 workspace-isolable, choose `nonconcurrent` and note why.
 
 For the full Conductor reference (Files-to-copy, spotlight testing, environment variables,
-settings precedence), use the `conductor` skill.
+settings precedence), see the Conductor docs at https://conductor.build/docs.

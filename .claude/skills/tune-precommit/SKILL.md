@@ -3,6 +3,8 @@ name: tune-precommit
 description: Use when setting up or editing a project's `.ai-setup/precommit` hook — the pre-commit checks the ai-setup `commit` helper runs before every commit. Trigger when creating or modifying `.ai-setup/precommit`, configuring pre-commit lint/format/test checks, deciding whether tests should run on commit, or right after onboarding a project with ai-setup. Covers choosing the project's real lint/format/typecheck/test commands and keeping the gate fast (e.g. skipping or subsetting slow test suites, using parallel tests).
 ---
 
+<!-- managed by ai-setup — edit this file and it becomes yours (ai-setup then stops updating it); customize by adding your own skill alongside instead. -->
+
 # Tune the pre-commit hook
 
 `.ai-setup/precommit` is a plain script the ai-setup `commit` helper runs before every commit

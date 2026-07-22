@@ -14,4 +14,5 @@
 # ai-setup >>>
 /CLAUDE.local.md
 /.claude/settings.local.json
+*.ai-setup-new
 # ai-setup <<<

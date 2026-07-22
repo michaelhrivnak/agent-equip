@@ -1,3 +1,5 @@
+<!-- managed by ai-setup — edit this file and it becomes yours (ai-setup then stops updating it); customize by adding your own alongside instead. -->
+
 # Onboarding prompt — build this project's AI context
 
 Purpose: give future AI agents the project-specific context they need to work here quickly.

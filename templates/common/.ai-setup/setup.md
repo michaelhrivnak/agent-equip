@@ -1,3 +1,5 @@
+<!-- managed by ai-setup — edit this file and it becomes yours (ai-setup then stops updating it); customize by adding your own alongside instead. -->
+
 # ai-setup: set up this project for AI development
 
 Run the full ai-setup onboarding for this repository in one pass, with **minimal questions** —

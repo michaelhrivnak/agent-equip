@@ -127,6 +127,15 @@ test("applying an mcp tool writes mcpServers to .mcp.json", () => {
 	expect(isConfigured(ctx.target, tool)).toBe(true);
 });
 
+test("applying a plugin to a malformed settings.json is skipped, not clobbered", () => {
+	mkdirSync(join(ctx.target, ".claude"), { recursive: true });
+	const settings = join(ctx.target, ".claude/settings.json");
+	writeFileSync(settings, "{ oops, not json }");
+	applyAgentTools(ctx.target, [byId("caveman")]);
+	// User's file is left exactly as-is — never replaced with just tool config.
+	expect(readFileSync(settings, "utf8")).toBe("{ oops, not json }");
+});
+
 test("agent-tools.json manifest is not seeded into the target", () => {
 	install({ target: ctx.target, stack: "bun-cli", commitHelper: false });
 	expect(existsSync(join(ctx.target, "agent-tools.json"))).toBe(false);

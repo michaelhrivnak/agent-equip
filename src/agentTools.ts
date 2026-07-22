@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { TEMPLATES_DIR } from "./paths.ts";
+import { readTemplateFile } from "./assets.ts";
 
 /** A marketplace to register alongside a plugin (`.claude/settings.json` extraKnownMarketplaces). */
 export interface MarketplaceRef {
@@ -47,11 +47,16 @@ const LAYERS = (stack: string): string[] => ["common", stack];
 export function loadAgentTools(stack: string): AgentToolDef[] {
 	const byId = new Map<string, AgentToolDef>();
 	for (const layer of LAYERS(stack)) {
-		const manifest = join(TEMPLATES_DIR, layer, "agent-tools.json");
-		if (!existsSync(manifest)) continue;
-		const parsed = JSON.parse(readFileSync(manifest, "utf8")) as {
-			tools?: AgentToolDef[];
-		};
+		const raw = readTemplateFile(layer, "agent-tools.json");
+		if (raw === null) continue;
+		let parsed: { tools?: AgentToolDef[] } = {};
+		try {
+			parsed = JSON.parse(raw);
+		} catch {
+			console.warn(
+				`ai-setup: templates/${layer}/agent-tools.json is not valid JSON — ignoring it.`,
+			);
+		}
 		for (const tool of parsed.tools ?? []) byId.set(tool.id, tool);
 	}
 	return [...byId.values()];
@@ -63,6 +68,16 @@ function readJson(file: string): Json {
 		return JSON.parse(readFileSync(file, "utf8")) as Json;
 	} catch {
 		return {};
+	}
+}
+
+/** Read a JSON object; `{}` if absent, `null` if it exists but is malformed (must not clobber). */
+function readJsonSafe(file: string): Json | null {
+	if (!existsSync(file)) return {};
+	try {
+		return JSON.parse(readFileSync(file, "utf8")) as Json;
+	} catch {
+		return null;
 	}
 }
 
@@ -139,31 +154,40 @@ function applyHook(settings: Json, tool: AgentToolDef): void {
 }
 
 /**
- * Apply selected tools into the target's JSON, merging with what's already there (object keys merge;
- * hooks array-union with dedup). Writes .claude/settings.json and/or .mcp.json only if touched.
+ * Apply selected tools into the target's JSON, merging with what's already there (object keys
+ * merge; hooks array-union with dedup). If a target file exists but is malformed JSON, its tools
+ * are skipped with a warning — the file is never overwritten. Writes only files actually touched.
  */
 export function applyAgentTools(target: string, tools: AgentToolDef[]): void {
 	if (tools.length === 0) return;
 	const settingsPath = join(target, ".claude/settings.json");
 	const mcpPath = join(target, ".mcp.json");
-	const settings = readJson(settingsPath);
-	const mcp = readJson(mcpPath);
+	const settings = readJsonSafe(settingsPath);
+	const mcp = readJsonSafe(mcpPath);
 	let settingsDirty = false;
 	let mcpDirty = false;
 
+	const skip = (path: string, tool: AgentToolDef) =>
+		console.warn(
+			`ai-setup: ${path} is not valid JSON — skipping "${tool.name}". Fix it and re-run.`,
+		);
+
 	for (const tool of tools) {
-		if (tool.type === "plugin") {
-			applyPlugin(settings, tool);
-			settingsDirty = true;
-		} else if (tool.type === "mcp") {
-			applyMcp(mcp, tool);
-			mcpDirty = true;
+		if (tool.type === "mcp") {
+			if (mcp === null) skip(mcpPath, tool);
+			else {
+				applyMcp(mcp, tool);
+				mcpDirty = true;
+			}
+		} else if (settings === null) {
+			skip(settingsPath, tool);
 		} else {
-			applyHook(settings, tool);
+			if (tool.type === "plugin") applyPlugin(settings, tool);
+			else applyHook(settings, tool);
 			settingsDirty = true;
 		}
 	}
 
-	if (settingsDirty) writeJson(settingsPath, settings);
-	if (mcpDirty) writeJson(mcpPath, mcp);
+	if (settingsDirty && settings) writeJson(settingsPath, settings);
+	if (mcpDirty && mcp) writeJson(mcpPath, mcp);
 }

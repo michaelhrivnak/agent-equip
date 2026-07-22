@@ -91,4 +91,9 @@ trivial tasks, use judgment.
 
 - Turn tasks into verifiable goals ("add validation" → "write tests for invalid inputs, then
   make them pass") and loop until verified.
+
+## Secrets and .env
+
+- Never read `.env` or other real secret files — they hold live credentials.
+- Read `.env.example` instead for variable names and structure; ask the user for real values.
 <!-- ai-setup <<< -->
