@@ -11,19 +11,26 @@ import {
 import { dirname } from "node:path";
 import { hash } from "./manifest.ts";
 
+// The MSBuild (`*.csproj`/`*.props`/`*.targets`) merge lives in its own module (it owns the XML
+// parser dependency and MSBuild-specific shape logic); re-exported here so callers import one place.
+export { mergeMsbuild } from "./merge/msbuild.ts";
+
 export type Outcome =
 	| "created"
 	| "updated"
 	| "up-to-date"
 	| "merged-json"
+	| "merged-msbuild"
 	| "new-written"
 	| "forked";
 
-function ensureDir(file: string): void {
+/** Create the parent directory for `file` if it doesn't exist. Shared across merge strategies. */
+export function ensureDir(file: string): void {
 	mkdirSync(dirname(file), { recursive: true });
 }
 
-function sameFile(src: string, dst: string): boolean {
+/** Whether `src` and `dst` exist with identical bytes. Shared across merge strategies. */
+export function sameFile(src: string, dst: string): boolean {
 	return existsSync(dst) && readFileSync(src).equals(readFileSync(dst));
 }
 
@@ -32,7 +39,7 @@ function isExecutable(file: string): boolean {
 }
 
 /** Remove a stale `${dst}.agent-equip-new` once the target no longer needs reconciling. */
-function clearArtifact(dst: string): void {
+export function clearArtifact(dst: string): void {
 	rmSync(`${dst}.agent-equip-new`, { force: true });
 }
 

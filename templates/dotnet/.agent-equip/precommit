@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+#
+# Pre-commit checks for a .NET project. The `commit` helper runs this before committing and stages
+# the results. Exit non-zero to abort. Each step guards on its tool so it no-ops when absent.
+set -euo pipefail
+
+# Format: prefer CSharpier when its local tool is installed (write mode so fixes get staged),
+# otherwise fall back to the SDK's `dotnet format`. CSharpier 1.x CLI is `csharpier format`.
+if dotnet tool run csharpier --version >/dev/null 2>&1; then
+    echo "▶ csharpier"; dotnet tool run csharpier format .
+elif command -v dotnet >/dev/null 2>&1; then
+    echo "▶ dotnet format"; dotnet format
+fi
+
+if command -v dotnet >/dev/null 2>&1; then
+    echo "▶ test"; dotnet test --nologo
+fi

@@ -6,6 +6,7 @@ import {
 	ensureBlock,
 	manifestedCopy,
 	mergeJson,
+	mergeMsbuild,
 	type Outcome,
 } from "./merge.ts";
 import { assembleAgents, composeFiles, composeSkills } from "./templates.ts";
@@ -43,19 +44,32 @@ const METADATA = new Set(["packages.json", "stack.json", "agent-tools.json"]);
 // Source files whose target path differs from their name.
 const RENAMES: Record<string, string> = { "gitignore.snippet": ".gitignore" };
 
-export type MergeKind = "claude-md" | "gitignore" | "json" | "toml" | "copy";
+export type MergeKind =
+	| "claude-md"
+	| "gitignore"
+	| "json"
+	| "toml"
+	| "msbuild"
+	| "copy";
 
 /**
  * How a file merges into the target, chosen by type rather than a hardcoded path list — so a
  * new stack's structured config (e.g. a .NET `appsettings.json` or a `pyproject.toml`) merges
  * correctly without editing this file. Marked-block files are explicit; the rest route by
- * extension.
+ * extension: JSON deep-merges, MSBuild files (`*.csproj`/`*.props`/`*.targets`) merge, TOML and
+ * everything else are whole-file/manifest-owned.
  */
 export function strategyFor(rel: string): MergeKind {
 	if (rel === "CLAUDE.md") return "claude-md";
 	if (rel === ".gitignore") return "gitignore";
 	if (rel.endsWith(".json")) return "json";
 	if (rel.endsWith(".toml")) return "toml";
+	if (
+		rel.endsWith(".csproj") ||
+		rel.endsWith(".props") ||
+		rel.endsWith(".targets")
+	)
+		return "msbuild";
 	return "copy";
 }
 
@@ -92,6 +106,8 @@ function applyStrategy(
 			);
 		case "json":
 			return mergeJson(src, dst, dryRun);
+		case "msbuild":
+			return mergeMsbuild(src, dst, dryRun);
 		default: {
 			// copy + toml: whole-file, manifest-owned.
 			const result = manifestedCopy(src, dst, prev[rel], dryRun);

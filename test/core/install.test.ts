@@ -228,8 +228,8 @@ test("dry run reports real outcomes but writes nothing", () => {
 	expect(existsSync(join(ctx.home, ".zshrc"))).toBe(false);
 });
 
-test("both stacks are available", () => {
-	expect(listStacks()).toEqual(["bun-cli", "laravel"]);
+test("all stacks are available", () => {
+	expect(listStacks()).toEqual(["bun-cli", "dotnet", "laravel"]);
 });
 
 test("merge strategy is chosen by file type, so new stacks' configs merge (not copied)", () => {
@@ -240,6 +240,9 @@ test("merge strategy is chosen by file type, so new stacks' configs merge (not c
 	expect(strategyFor("global.json")).toBe("json");
 	expect(strategyFor(".conductor/settings.toml")).toBe("toml");
 	expect(strategyFor("pyproject.toml")).toBe("toml");
+	expect(strategyFor("Directory.Build.props")).toBe("msbuild"); // .NET — merged, not copied
+	expect(strategyFor("App.csproj")).toBe("msbuild");
+	expect(strategyFor("Directory.Build.targets")).toBe("msbuild");
 	expect(strategyFor(".agent-equip/precommit")).toBe("copy");
 	expect(strategyFor("CLAUDE.local.md.example")).toBe("copy");
 });

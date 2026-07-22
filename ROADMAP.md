@@ -40,7 +40,7 @@ shipped as per-platform npm packages (esbuild-style: same `npx` UX, ~5 MB downlo
 
 Broaden stack coverage.
 
-- Add a **dotnet** stack — validates XML/`appsettings.json` merge routing ([#8](https://github.com/michaelhrivnak/agent-equip/issues/8))
+- ✅ Add a **dotnet** stack — added XML merge routing (`*.csproj`/`*.props`/`*.targets`) ([#8](https://github.com/michaelhrivnak/agent-equip/issues/8))
 - Additional stacks: node/generic, python (tracking) ([#9](https://github.com/michaelhrivnak/agent-equip/issues/9))
 
 ### [M3 — Multi-agent](https://github.com/michaelhrivnak/agent-equip/milestone/3)
