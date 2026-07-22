@@ -80,6 +80,18 @@ cd /path/to/project
 npx agent-equip init --stack bun-cli
 ```
 
+Pull template improvements into a project you've already set up — `update` reads the stack and
+agents recorded at install time, so it needs no flags:
+
+```sh
+cd /path/to/project
+npx agent-equip update
+```
+
+It refreshes every pristine managed file to the current templates, reports a `vX → vY` line plus
+the per-file outcomes, and lists any files it left alone because you'd edited them ("kept your
+local edits"). Add `--dry-run` to preview.
+
 List available stacks:
 
 ```sh
@@ -110,6 +122,14 @@ bun run bin/agent-equip.ts init /path/to/project --stack laravel
 | `--no-packages` | Skip the curated package picker |
 | `--no-agent-tools` | Skip the agent-tools picker (plugins / MCP / hooks) |
 | `--force` | Allow installing into the agent-equip repo itself (dogfooding) |
+
+### `update` options
+
+| Flag | Description |
+| --- | --- |
+| `--dry-run` | Show what would change; write nothing |
+| `--project-only` | Refresh project files only; skip the user-level `commit` helper |
+| `-s, --stack <name>` | Override the stack (only needed for a pre-versioned install with no recorded stack) |
 
 ### What gets installed
 

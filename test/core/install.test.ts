@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import pkg from "../../package.json" with { type: "json" };
 import { install, strategyFor } from "../../src/install.ts";
-import { listStacks, stackMeta } from "../../src/templates.ts";
+import { ensureBlock } from "../../src/merge.ts";
+import { assembleAgents, listStacks, stackMeta } from "../../src/templates.ts";
 import { useSandbox, walk } from "../helpers.ts";
 
 const ctx = useSandbox();
@@ -81,9 +83,7 @@ test("AGENTS.md carries the skills index pointing at .agent-equip/skills", () =>
 	install({ target: ctx.target, stack: "laravel", commitHelper: false });
 	const agents = readFileSync(join(ctx.target, "AGENTS.md"), "utf8");
 	expect(agents).toContain("# Skills");
-	expect(agents).toContain(
-		"`.agent-equip/skills/test-driven-development.md`",
-	);
+	expect(agents).toContain("`.agent-equip/skills/test-driven-development.md`");
 });
 
 test("agent selection gates the Claude adapter; the neutral body ships regardless", () => {
@@ -111,6 +111,35 @@ test("ships the /agent-equip orchestrator (setup prompt + command)", () => {
 	expect(existsSync(join(ctx.target, ".claude/commands/agent-equip.md"))).toBe(
 		true,
 	);
+});
+
+test("manifest records the install header (version, stack, agents) and tracks settings.json", () => {
+	install({ target: ctx.target, stack: "laravel", commitHelper: false });
+	const m = JSON.parse(
+		readFileSync(join(ctx.target, ".agent-equip/manifest.json"), "utf8"),
+	);
+	expect(m.version).toBe(pkg.version);
+	expect(m.stack).toBe("laravel");
+	expect(m.agents).toEqual(["claude", "codex"]);
+	expect(m.files[".claude/settings.json"]).toBeDefined(); // JSON now manifest-tracked
+});
+
+test("AGENTS.md marker carries the version stamp", () => {
+	install({ target: ctx.target, stack: "laravel", commitHelper: false });
+	expect(readFileSync(join(ctx.target, "AGENTS.md"), "utf8")).toContain(
+		`<!-- agent-equip >>> v${pkg.version}`,
+	);
+});
+
+test("a version bump refreshes the AGENTS block in place — no duplicate marker", () => {
+	const dst = join(ctx.target, "AGENTS.md");
+	const markers = ["<!-- agent-equip >>>", "<!-- agent-equip <<< -->"] as const;
+	ensureBlock(dst, assembleAgents("laravel", "0.0.1"), ...markers);
+	ensureBlock(dst, assembleAgents("laravel", "0.0.2"), ...markers);
+	const out = readFileSync(dst, "utf8");
+	expect(out.match(/agent-equip >>>/g)?.length).toBe(1); // single block
+	expect(out).toContain("v0.0.2");
+	expect(out).not.toContain("v0.0.1");
 });
 
 test("re-run is idempotent: one block, no *.agent-equip-new", () => {
@@ -175,9 +204,9 @@ test("existing .agent-equip/precommit is untouched; a *.agent-equip-new is left 
 	expect(
 		readFileSync(join(ctx.target, ".agent-equip/precommit"), "utf8"),
 	).toContain("echo mine");
-	expect(existsSync(join(ctx.target, ".agent-equip/precommit.agent-equip-new"))).toBe(
-		true,
-	);
+	expect(
+		existsSync(join(ctx.target, ".agent-equip/precommit.agent-equip-new")),
+	).toBe(true);
 });
 
 test("gitignore keeps existing lines and adds the agent-equip block", () => {
@@ -190,7 +219,9 @@ test("gitignore keeps existing lines and adds the agent-equip block", () => {
 
 test("commit helper installs commit.sh and sources it from ~/.zshrc under zsh", () => {
 	install({ target: ctx.target, stack: "laravel" });
-	expect(existsSync(join(ctx.home, ".config/agent-equip/commit.sh"))).toBe(true);
+	expect(existsSync(join(ctx.home, ".config/agent-equip/commit.sh"))).toBe(
+		true,
+	);
 	expect(readFileSync(join(ctx.home, ".zshrc"), "utf8")).toContain(
 		"# agent-equip: commit helper",
 	);

@@ -1,7 +1,19 @@
 import { expect, test } from "bun:test";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
-import { hash } from "../../src/manifest.ts";
+import {
+	hash,
+	loadManifest,
+	manifestPath,
+	restampFiles,
+	saveManifest,
+} from "../../src/manifest.ts";
 import { manifestedCopy } from "../../src/merge.ts";
 import { useSandbox } from "../helpers.ts";
 
@@ -77,4 +89,52 @@ test("dry run computes the outcome but writes nothing", () => {
 	const r = manifestedCopy(src, dst, undefined, true);
 	expect(r.outcome).toBe("created");
 	expect(existsSync(dst)).toBe(false);
+});
+
+test("loadManifest migrates a pre-v2 flat manifest into the { files } shape", () => {
+	mkdirSync(join(ctx.target, ".agent-equip"), { recursive: true });
+	writeFileSync(
+		manifestPath(ctx.target),
+		JSON.stringify({ "a.md": "abc123", "b.md": "forked" }),
+	);
+	const m = loadManifest(ctx.target);
+	expect(m.files).toEqual({ "a.md": "abc123", "b.md": "forked" });
+	expect(m.version).toBeUndefined();
+	expect(m.stack).toBeUndefined();
+	expect(m.agents).toBeUndefined();
+});
+
+test("saveManifest writes the header and sorts the file keys", () => {
+	saveManifest(ctx.target, {
+		version: "1.2.3",
+		stack: "laravel",
+		agents: ["claude"],
+		files: { "b.md": "x", "a.md": "y" },
+	});
+	const m = JSON.parse(readFileSync(manifestPath(ctx.target), "utf8"));
+	expect(m.version).toBe("1.2.3");
+	expect(m.stack).toBe("laravel");
+	expect(m.agents).toEqual(["claude"]);
+	expect(Object.keys(m.files)).toEqual(["a.md", "b.md"]); // sorted
+});
+
+test("restampFiles re-hashes only files already tracked; skips untracked and absent ones", () => {
+	// settings.json is already tracked (install recorded a stale hash); .mcp.json exists on disk but
+	// was never tracked; skills body is tracked but absent on disk.
+	saveManifest(ctx.target, {
+		files: {
+			".claude/settings.json": "stalehash",
+			".agent-equip/skills/x.md": "abc",
+		},
+	});
+	mkdirSync(join(ctx.target, ".claude"), { recursive: true });
+	writeFileSync(join(ctx.target, ".claude/settings.json"), "{}\n");
+	writeFileSync(join(ctx.target, ".mcp.json"), '{"mcpServers":{}}\n');
+
+	restampFiles(ctx.target, [".claude/settings.json", ".mcp.json"]);
+
+	const m = loadManifest(ctx.target);
+	expect(m.files[".claude/settings.json"]).toBe(hash("{}\n")); // tracked → re-stamped
+	expect(m.files[".mcp.json"]).toBeUndefined(); // untracked → never added
+	expect(m.files[".agent-equip/skills/x.md"]).toBe("abc"); // tracked but absent → left as-is
 });

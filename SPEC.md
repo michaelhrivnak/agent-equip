@@ -53,8 +53,11 @@ start/end marker pair, one pair per file type:
 | `.gitignore` | `# agent-equip >>>` | `# agent-equip <<<` |
 
 The `AGENTS.md`/`CLAUDE.md` start marker carries trailing descriptive text on the same line
-(`<!-- agent-equip >>> (managed by agent-equip …) -->`); markers are matched by **prefix at the
-start of a line** (after leading whitespace), so the trailing text does not affect matching.
+(`<!-- agent-equip >>> (managed by agent-equip …) -->`); the `AGENTS.md` marker additionally
+stamps the installing CLI **version** right after the prefix (`<!-- agent-equip >>> vX.Y.Z (…) -->`).
+Markers are matched by **prefix at the start of a line** (after leading whitespace) — the constant
+`<!-- agent-equip >>>` prefix — so neither the trailing text nor the version affects matching, and
+a version bump refreshes the block in place rather than leaving a stale duplicate.
 
 Refresh semantics (`ensureBlock`):
 
@@ -91,8 +94,11 @@ Whole-file managed files (everything routed to "copy" or "toml" — prompts, ski
 agent-equip can tell a **pristine** file (still exactly as it last wrote) from a **forked** one
 (edited by the team).
 
-Manifest format: a JSON object of `relative path -> value`, keys sorted, file ending in a
-newline. The value is either:
+Manifest format: a JSON object with an install-params **header** (`version` — the CLI that last
+wrote it, `stack`, `agents`) plus a `files` object of `relative path -> value` (keys sorted, file
+ending in a newline). The header lets `update` re-run the same compose+merge non-interactively. A
+pre-versioned flat manifest (`{ "<rel>": "<value>" }` with no `files` key) is read transparently as
+`{ files: … }` with an absent header. Each file value is either:
 
 - the lowercase hex **sha256 of the file's bytes as agent-equip last wrote them**, or
 - the literal string `"forked"` — the **fork sentinel**. It can never equal a sha256 (64 hex
@@ -115,7 +121,8 @@ Notes:
   recorded so later runs stay silent (no repeated `*.agent-equip-new` churn).
 - The executable bit of a written file derives from the **source** file's mode (so a stack stays
   pure data — an executable `precommit`/`setup.sh` in a template lands executable).
-- Marked-block (§3) and JSON (§6) files are **not** manifest-tracked.
+- Marked-block (§3) and MSBuild (§7) files are **not** manifest-tracked. JSON files (§6) **are**
+  tracked (their merged-result hash), so `update` can surface a hand-edited one.
 
 ## 6. JSON deep-merge
 
@@ -124,15 +131,24 @@ run, non-destructively:
 
 - **Target absent** → copy the template (`created`).
 - **Target bytes == template** → `up-to-date`.
-- **Target is malformed JSON** → never overwrite; drop `<target>.agent-equip-new` beside it
-  (`new-written`).
+- **Target is malformed JSON** → never overwrite. On first encounter (no prior manifest value) drop
+  `<target>.agent-equip-new` beside it (`new-written`, records the fork sentinel); on later runs stay
+  **silent** (`forked`, keep the prior value) so it never re-churns the artifact — mirrors §5.
 - **Otherwise** → deep-merge and write if the result changed (`merged-json`), else `up-to-date`.
 
 Merge rule: **existing values win.** For a key present in both, a scalar or array in the target is
 kept as-is (arrays are not concatenated); two objects merge recursively; keys only the template
 introduces are added. Re-running is therefore safe and convergent.
 
-(JSON files are not yet pristine/fork-tracked in the manifest — see ROADMAP M4.)
+JSON files **are** manifest-tracked: the sha256 of the merged result is recorded. When the target's
+current bytes no longer match that recorded hash, it was **hand-edited** since agent-equip last wrote
+it — the outcome is reported `forked` (so `update` surfaces it as "kept your local edits") while the
+non-destructive deep-merge still runs. Divergence is surfaced **once** — the merged bytes become the
+new recorded baseline. Only template-seeded JSON (e.g. `.claude/settings.json`) is tracked this way.
+Because the agent-tools picker edits `settings.json` *after* the install records the manifest, that
+file's hash is re-stamped to the post-picker bytes — and re-stamping only touches paths the install
+already tracked, so a picker-only file that isn't a template (e.g. `.mcp.json`) never enters the
+manifest and is refreshed only by re-running the picker, not by `update`.
 
 ## 7. MSBuild merge
 

@@ -110,7 +110,11 @@ function unionProject(tmpl: XmlNode[], tgt: XmlNode[]): boolean {
 				items.add(key);
 				added = true;
 			}
-		} else if (tag && tag !== "#comment" && !tgt.some((n) => tagOf(n) === tag)) {
+		} else if (
+			tag &&
+			tag !== "#comment" &&
+			!tgt.some((n) => tagOf(n) === tag)
+		) {
 			tgt.push(child);
 			added = true;
 		}
@@ -126,7 +130,11 @@ function unionProject(tmpl: XmlNode[], tgt: XmlNode[]): boolean {
  * Idempotent: when the union adds nothing, report up-to-date without rewriting (so an unchanged
  * file never churns its formatting).
  */
-export function mergeMsbuild(src: string, dst: string, dryRun = false): Outcome {
+export function mergeMsbuild(
+	src: string,
+	dst: string,
+	dryRun = false,
+): Outcome {
 	if (!existsSync(dst)) {
 		if (!dryRun) {
 			ensureDir(dst);
