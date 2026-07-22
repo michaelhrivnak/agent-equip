@@ -1,0 +1,17 @@
+<!-- agent-equip: repo-wide code-quality enforcement. agent-equip MERGES these into your existing
+     Directory.Build.props (your values win; new settings are added). Tune rule severities in
+     .editorconfig. NOTE: TreatWarningsAsErrors makes the build fail on warnings — clear them when
+     adopting this on an existing repo. Under Central Package Management, remove Version from the
+     Roslynator PackageReference below and add a <PackageVersion> to Directory.Packages.props. -->
+<Project>
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Roslynator.Analyzers" Version="4.13.1" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

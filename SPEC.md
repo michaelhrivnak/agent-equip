@@ -80,6 +80,7 @@ list), so a new stack's structured config merges correctly without code changes:
 | `CLAUDE.md` | marked-block (§3) |
 | `.gitignore` | marked-block (§3) |
 | `*.json` | JSON deep-merge (§6) |
+| `*.csproj` / `*.props` / `*.targets` | MSBuild merge (§7) |
 | `*.toml` | whole-file / manifest (§5) |
 | anything else | whole-file / manifest (§5) |
 
@@ -133,9 +134,28 @@ introduces are added. Re-running is therefore safe and convergent.
 
 (JSON files are not yet pristine/fork-tracked in the manifest — see ROADMAP M4.)
 
-## 7. Reconcile copies
+## 7. MSBuild merge
+
+For MSBuild files (`*.csproj`, `*.props`, `*.targets` — e.g. a `Directory.Build.props`), the template
+is merged into the target's `<Project>`, the XML analog of the JSON deep-merge:
+
+- **Target absent** → copy the template (`created`).
+- **Target bytes == template** → `up-to-date`.
+- **Target is malformed XML, or has no `<Project>`** → never overwrite; drop
+  `<target>.agent-equip-new` beside it (`new-written`).
+- **Otherwise** → union the template's `<Project>` children into the target's and write if anything
+  was added (`merged-msbuild`), else `up-to-date` (the file is not rewritten, so formatting never
+  churns).
+
+Merge rule: **existing values win.** A `<PropertyGroup>` tag the target already sets is left as-is;
+`<ItemGroup>` items are keyed by (element tag + `Include` attribute) and added only when missing;
+any other top-level element is added when the target lacks that tag. Re-running is safe and
+convergent. (Like JSON, XML files are not manifest-tracked.)
+
+## 8. Reconcile copies
 
 Whenever a strategy refuses to overwrite a file it did not author (§5 first-encounter, §6
-malformed target), it leaves the incoming content beside the original with a **`.agent-equip-new`**
-suffix for the user to reconcile, and clears that copy once the target no longer differs. This
-suffix is the single reconcile-copy convention across all strategies.
+malformed target, §7 malformed/`<Project>`-less target), it leaves the incoming content beside the
+original with a **`.agent-equip-new`** suffix for the user to reconcile, and clears that copy once
+the target no longer differs. This suffix is the single reconcile-copy convention across all
+strategies.

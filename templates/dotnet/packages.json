@@ -1,0 +1,11 @@
+{
+	"packages": [
+		{
+			"id": "csharpier",
+			"name": "CSharpier",
+			"description": "Opinionated C# code formatter (Prettier-style)",
+			"detect": { "file": ".config/dotnet-tools.json", "contains": "csharpier" },
+			"install": "dotnet new tool-manifest 2>/dev/null; dotnet tool install csharpier"
+		}
+	]
+}
