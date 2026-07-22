@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readTemplateFile } from "./assets.ts";
@@ -42,9 +43,12 @@ export function missingPackages(target: string, stack: string): PackageDef[] {
 
 /** Run a package's install command in the target project. Returns true on success. */
 export function installPackage(target: string, pkg: PackageDef): boolean {
-	const res = Bun.spawnSync(["sh", "-c", pkg.install], {
+	// `shell: true` runs the command line via the platform shell (like `sh -c`), inheriting our
+	// stdio so the user sees progress. `status` is the exit code (null if killed by a signal).
+	const res = spawnSync(pkg.install, {
 		cwd: target,
-		stdio: ["inherit", "inherit", "inherit"],
+		stdio: "inherit",
+		shell: true,
 	});
-	return res.exitCode === 0;
+	return res.status === 0;
 }

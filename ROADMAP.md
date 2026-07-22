@@ -14,16 +14,27 @@ The core is built and validated:
   Conductor scaffolding.
 - Guided onboarding — `/agent-equip` (→ `/onboard` + the `tune-precommit` / `tune-conductor` skills)
   — validated across Laravel and Bun/TS projects.
+- Distribution — published to npm as a **Node bundle**, run with `npx agent-equip` (bun not
+  required). See the decision below.
+
+## Decisions
+
+### Distribution: node-compatible npm is the sole channel
+
+The published CLI is a plain Node bundle (`bun build --target=node`); `npx agent-equip` is the one
+supported entry point. **Low barrier to entry is a product tenet** — a contributor should be able
+to try agent-equip with a tool they already have (Node), not install a second runtime. The repo's
+own toolchain stays bun; only the shipped artifact must be Node-clean (CI's `node-smoke` job
+enforces no Bun runtime APIs).
+
+The earlier bun-compiled standalone binary was removed as redundant with this.
+
+**Revisit trigger:** real adopters with no Node available (expected earliest alongside the dotnet
+stack, M2). The plan then is *not* to revive the bun binary, but a small static binary (Go/Rust)
+shipped as per-platform npm packages (esbuild-style: same `npx` UX, ~5 MB download) plus a single
+`curl | sh` install script.
 
 ## Phases
-
-### [M1 — Usable by others](https://github.com/michaelhrivnak/agent-equip/milestone/1)
-
-Make it runnable without cloning the repo, and go public.
-
-- Publish to npm for `npx agent-equip` ([#5](https://github.com/michaelhrivnak/agent-equip/issues/5))
-- Standalone binary via `bun build --compile` + release workflow ([#6](https://github.com/michaelhrivnak/agent-equip/issues/6))
-- Make the repo public + fix the CI badge ([#7](https://github.com/michaelhrivnak/agent-equip/issues/7))
 
 ### [M2 — More stacks](https://github.com/michaelhrivnak/agent-equip/milestone/2)
 

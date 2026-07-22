@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Test the documented floor (README: Bun v1.3+) and the latest release.
+        # Test the dev-toolchain floor (bun 1.3) and the latest release.
         bun-version: ["1.3.0", latest]
     steps:
       - uses: actions/checkout@v4
@@ -21,3 +21,56 @@ jobs:
       - run: bun run lint
       - run: bun run typecheck
       - run: bun test
+
+  # Build the Node bundle and pack the tarball (needs bun as the build toolchain), then hand the
+  # tarball to a separate job to install + run — so packaging problems (a missing `files` entry)
+  # are caught before publish.
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: npm pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tarball
+          path: ./*.tgz
+
+  # Permanent no-Bun guard: install the packed tarball and run the CLI on plain Node, with bun
+  # deliberately ABSENT from PATH. Fails if the shipped code ever reaches for a Bun runtime API.
+  node-smoke:
+    needs: pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/download-artifact@v4
+        with:
+          name: tarball
+      - name: Install the tarball and smoke-test on Node (no bun on PATH)
+        run: |
+          set -euo pipefail
+          if command -v bun >/dev/null 2>&1; then
+            echo "bun must NOT be on PATH for this job — the point is to prove Node-only support"
+            exit 1
+          fi
+          TGZ="$PWD/$(ls agent-equip-*.tgz)"
+          CONSUMER="$(mktemp -d)"
+          ( cd "$CONSUMER" && npm init -y >/dev/null && npm install "$TGZ" >/dev/null )
+          BIN="$CONSUMER/node_modules/.bin/agent-equip"
+
+          echo "::group::agent-equip list"
+          OUT="$("$BIN" list)"; echo "$OUT"
+          echo "$OUT" | grep -qx bun-cli
+          echo "$OUT" | grep -qx laravel
+          echo "::endgroup::"
+
+          TARGET="$(mktemp -d)"; git -C "$TARGET" init -q
+          HOME="$(mktemp -d)" "$BIN" init "$TARGET" --stack bun-cli --yes --project-only
+          test -f "$TARGET/AGENTS.md"
+          test -f "$TARGET/.agent-equip/manifest.json"
+          test -x "$TARGET/.agent-equip/precommit"
+          echo "node-smoke OK"

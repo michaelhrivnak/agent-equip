@@ -1,6 +1,6 @@
 {
 	"name": "agent-equip",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "Quickstart installer that seeds AI-development tooling into projects, per stack",
 	"license": "MIT",
 	"author": "Michael Hrivnak",
@@ -13,12 +13,22 @@
 		"url": "https://github.com/michaelhrivnak/agent-equip/issues"
 	},
 	"type": "module",
-	"files": ["bin/", "src/", "templates/", "assets/"],
+	"engines": {
+		"node": ">=20"
+	},
+	"files": [
+		"dist/",
+		"templates/",
+		"assets/"
+	],
 	"bin": {
-		"agent-equip": "bin/agent-equip.ts"
+		"agent-equip": "dist/agent-equip.js"
 	},
 	"scripts": {
 		"start": "bun run bin/agent-equip.ts",
+		"stacks": "bun run scripts/generate-stacks.ts",
+		"build": "rm -rf dist && bun build bin/agent-equip.ts --target=node --outfile=dist/agent-equip.js --external @clack/prompts --external commander && chmod +x dist/agent-equip.js",
+		"prepublishOnly": "bun run build",
 		"test": "bun test",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome lint --error-on-warnings ./bin ./src ./test",
