@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 import { existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
@@ -13,6 +13,7 @@ import {
 	select,
 } from "@clack/prompts";
 import { Command } from "commander";
+import pkg from "../package.json" with { type: "json" };
 import { applyAgentTools, missingAgentTools } from "../src/agentTools.ts";
 import { install } from "../src/install.ts";
 import { installPackage, missingPackages } from "../src/packages.ts";
@@ -33,7 +34,7 @@ const program = new Command();
 program
 	.name("agent-equip")
 	.description("Seed AI-development tooling into a project, per stack")
-	.version("0.1.0");
+	.version(pkg.version);
 
 program
 	.command("init", { isDefault: true })

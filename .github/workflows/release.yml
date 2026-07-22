@@ -1,0 +1,18 @@
+name: Release
+
+# Validate a v* tag. Publishing to npm stays manual (see README / versioning decision) — this
+# workflow only gates the tag with the same checks as CI, so a broken tag is caught.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+      - run: bun test

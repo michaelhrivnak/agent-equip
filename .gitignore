@@ -1,6 +1,10 @@
 .DS_Store
 /node_modules
 
+# compiled standalone binaries (bun build --compile) + its scratch files
+/dist
+*.bun-build
+
 # editors
 /.idea
 /.vscode
