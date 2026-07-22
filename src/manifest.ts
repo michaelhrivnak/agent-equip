@@ -1,12 +1,12 @@
-// Ownership manifest: `.ai-setup/manifest.json` records the sha256 of each whole-file managed
-// file AS AI-SETUP LAST WROTE IT. A file whose current bytes still match its manifest hash is
-// "pristine" (untouched by the team) and tracks upstream; once edited it diverges and ai-setup
+// Ownership manifest: `.agent-equip/manifest.json` records the sha256 of each whole-file managed
+// file AS AGENT-EQUIP LAST WROTE IT. A file whose current bytes still match its manifest hash is
+// "pristine" (untouched by the team) and tracks upstream; once edited it diverges and agent-equip
 // leaves it alone. Committed with the repo; deterministic key order for byte-stable re-runs.
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-export const MANIFEST_REL = ".ai-setup/manifest.json";
+export const MANIFEST_REL = ".agent-equip/manifest.json";
 export type Manifest = Record<string, string>;
 
 export function hash(content: Buffer | string): string {

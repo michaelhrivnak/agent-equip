@@ -1,10 +1,10 @@
-<!-- managed by ai-setup — edit this file and it becomes yours (ai-setup then stops updating it); customize by adding your own alongside instead. -->
+<!-- managed by agent-equip — edit this file and it becomes yours (agent-equip then stops updating it); customize by adding your own alongside instead. -->
 
 # Onboarding prompt — build this project's AI context
 
 Purpose: give future AI agents the project-specific context they need to work here quickly.
 Explore this repository, then write a concise **project context** into `AGENTS.md`, ABOVE the
-`<!-- ai-setup >>>` managed block. Never edit anything inside that block.
+`<!-- agent-equip >>>` managed block. Never edit anything inside that block.
 
 Capture only what an agent CANNOT infer on its own. Be brief, specific, and cite file paths.
 Do not restate what is obvious from the code or standard for this project's stack.
@@ -41,7 +41,7 @@ Do NOT list anything the stack already implies; an agent already knows the defau
 deviations are the signals it can't guess. For each: the usual norm → what this project does
 instead → where to see it.
 
-**Start this section** with any contradictions between the ai-setup managed block below (or your
+**Start this section** with any contradictions between the agent-equip managed block below (or your
 global rules) and the actual code — one line each, formatted `block says X → real answer is Y
 (proof: <path>)`. If the block or rules name a test framework, package manager, or formatter
 (Pest, PHPUnit, Pint, npm/pnpm/bun, etc.), verify EACH against the manifest and state the result
@@ -83,14 +83,14 @@ is standard.
   restate them. Make "Conventions that differ" a short curated INDEX — the 3–5 highest-signal
   deviations, one line each, each pointing to where the full rule already lives — not a
   re-derivation.
-- Describe the project's real commands, not the current contents of the ai-setup stub files
-  (`.ai-setup/precommit`, `.conductor/*`) — those get tuned right afterward, so any description of
+- Describe the project's real commands, not the current contents of the agent-equip stub files
+  (`.agent-equip/precommit`, `.conductor/*`) — those get tuned right afterward, so any description of
   them goes stale.
-- Do not touch the `<!-- ai-setup >>> ... <<< -->` block.
+- Do not touch the `<!-- agent-equip >>> ... <<< -->` block.
 
 ## After onboarding
 
-With the context captured, tailor the ai-setup stubs to the project's real tooling:
-`.ai-setup/precommit` (the pre-commit checks) and `.conductor/setup.sh` + `.conductor/settings.toml`
+With the context captured, tailor the agent-equip stubs to the project's real tooling:
+`.agent-equip/precommit` (the pre-commit checks) and `.conductor/setup.sh` + `.conductor/settings.toml`
 (Conductor workspace setup). In Claude Code, the `tune-precommit` and `tune-conductor` skills
 guide this.

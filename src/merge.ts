@@ -31,9 +31,9 @@ function isExecutable(file: string): boolean {
 	return (statSync(file).mode & 0o111) !== 0;
 }
 
-/** Remove a stale `${dst}.ai-setup-new` once the target no longer needs reconciling. */
+/** Remove a stale `${dst}.agent-equip-new` once the target no longer needs reconciling. */
 function clearArtifact(dst: string): void {
-	rmSync(`${dst}.ai-setup-new`, { force: true });
+	rmSync(`${dst}.agent-equip-new`, { force: true });
 }
 
 export interface ManifestResult {
@@ -51,7 +51,7 @@ export const FORK_SENTINEL = "forked";
  *  - dst absent                       → seed from template; record its hash.
  *  - dst == template                  → up-to-date; record hash (clear any stale artifact).
  *  - no prior hash + dst exists+differs → a pre-existing/foreign file: never overwrite, drop a
- *                                        `${dst}.ai-setup-new` ONCE, and record the fork sentinel so
+ *                                        `${dst}.agent-equip-new` ONCE, and record the fork sentinel so
  *                                        later runs take the silent forked path (no artifact churn).
  *  - dst hash == prior hash (pristine) → refresh from the new template; record the new hash.
  *  - otherwise (forked/sentinel)      → leave it untouched, silently; keep the prior manifest value.
@@ -86,9 +86,9 @@ export function manifestedCopy(
 	}
 	if (prevHash === undefined) {
 		if (!dryRun) {
-			ensureDir(`${dst}.ai-setup-new`);
-			writeFileSync(`${dst}.ai-setup-new`, srcBuf);
-			if (exec) chmodSync(`${dst}.ai-setup-new`, 0o755);
+			ensureDir(`${dst}.agent-equip-new`);
+			writeFileSync(`${dst}.agent-equip-new`, srcBuf);
+			if (exec) chmodSync(`${dst}.agent-equip-new`, 0o755);
 		}
 		return { outcome: "new-written", hash: FORK_SENTINEL };
 	}
@@ -172,7 +172,7 @@ function deepMerge(template: unknown, existing: unknown): unknown {
 
 /**
  * Deep-merge template JSON into the target's (existing values win; arrays union). If the target
- * is malformed JSON, never overwrite it — leave a `${dst}.ai-setup-new` instead. Idempotent: an
+ * is malformed JSON, never overwrite it — leave a `${dst}.agent-equip-new` instead. Idempotent: an
  * unchanged result is reported up-to-date without rewriting.
  */
 export function mergeJson(src: string, dst: string, dryRun = false): Outcome {
@@ -193,7 +193,7 @@ export function mergeJson(src: string, dst: string, dryRun = false): Outcome {
 		existing = JSON.parse(current);
 	} catch {
 		// Target is malformed — do not touch it; leave a reconcile copy.
-		if (!dryRun) copyFileSync(src, `${dst}.ai-setup-new`);
+		if (!dryRun) copyFileSync(src, `${dst}.agent-equip-new`);
 		return "new-written";
 	}
 	const merged = deepMerge(JSON.parse(readFileSync(src, "utf8")), existing);

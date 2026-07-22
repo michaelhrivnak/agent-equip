@@ -3,7 +3,7 @@ name: codifying-existing-behavior
 description: Use when modifying existing backend business logic — refactoring, fixing bugs, or changing behavior of an existing service, model, job, action, command, or controller method. Mandates writing a test that codifies current behavior (or reproduces the bug) BEFORE touching production code. For bugs, the test starts red. For non-bug changes, the test starts green and stays green-with-new-assertions after the change. Skip for UI/visual tweaks, copy/comment/formatting changes, pure additions of new methods or classes, dependency bumps, and code with no reasonable test seam.
 ---
 
-<!-- managed by ai-setup — edit this file and it becomes yours (ai-setup then stops updating it); customize by adding your own skill alongside instead. -->
+<!-- managed by agent-equip — edit this file and it becomes yours (agent-equip then stops updating it); customize by adding your own skill alongside instead. -->
 
 # Codifying Existing Behavior
 

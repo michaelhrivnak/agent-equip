@@ -1,19 +1,23 @@
 {
-	"name": "ai-setup",
+	"name": "agent-equip",
 	"version": "0.1.0",
 	"description": "Quickstart installer that seeds AI-development tooling into projects, per stack",
 	"license": "MIT",
 	"author": "Michael Hrivnak",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/michaelhrivnak/ai-setup.git"
+		"url": "git+https://github.com/michaelhrivnak/agent-equip.git"
+	},
+	"homepage": "https://github.com/michaelhrivnak/agent-equip#readme",
+	"bugs": {
+		"url": "https://github.com/michaelhrivnak/agent-equip/issues"
 	},
 	"type": "module",
 	"bin": {
-		"ai-setup": "bin/ai-setup.ts"
+		"agent-equip": "bin/agent-equip.ts"
 	},
 	"scripts": {
-		"start": "bun run bin/ai-setup.ts",
+		"start": "bun run bin/agent-equip.ts",
 		"test": "bun test",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome lint --error-on-warnings ./bin ./src ./test",

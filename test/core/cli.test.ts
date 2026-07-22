@@ -10,13 +10,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { REPO_ROOT } from "../../src/paths.ts";
 
-const BIN = join(REPO_ROOT, "bin", "ai-setup.ts");
+const BIN = join(REPO_ROOT, "bin", "agent-equip.ts");
 let sandbox: string;
 let target: string;
 let home: string;
 
 beforeEach(() => {
-	sandbox = mkdtempSync(join(tmpdir(), "ai-setup-cli-"));
+	sandbox = mkdtempSync(join(tmpdir(), "agent-equip-cli-"));
 	target = join(sandbox, "proj");
 	home = join(sandbox, "home");
 	mkdirSync(join(target, ".git"), { recursive: true }); // look like a git repo

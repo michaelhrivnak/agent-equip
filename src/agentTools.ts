@@ -54,7 +54,7 @@ export function loadAgentTools(stack: string): AgentToolDef[] {
 			parsed = JSON.parse(raw);
 		} catch {
 			console.warn(
-				`ai-setup: templates/${layer}/agent-tools.json is not valid JSON — ignoring it.`,
+				`agent-equip: templates/${layer}/agent-tools.json is not valid JSON — ignoring it.`,
 			);
 		}
 		for (const tool of parsed.tools ?? []) byId.set(tool.id, tool);
@@ -169,7 +169,7 @@ export function applyAgentTools(target: string, tools: AgentToolDef[]): void {
 
 	const skip = (path: string, tool: AgentToolDef) =>
 		console.warn(
-			`ai-setup: ${path} is not valid JSON — skipping "${tool.name}". Fix it and re-run.`,
+			`agent-equip: ${path} is not valid JSON — skipping "${tool.name}". Fix it and re-run.`,
 		);
 
 	for (const tool of tools) {

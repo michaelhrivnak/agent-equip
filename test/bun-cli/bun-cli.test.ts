@@ -13,7 +13,7 @@ test("bun-cli: AGENTS.md merges common rules with the bun-test testing rule", ()
 	expect(agents).toContain("bun test"); // bun-cli testing rule
 	expect(agents).toContain("# Git"); // from common
 	expect(
-		readFileSync(join(ctx.target, ".ai-setup/precommit"), "utf8"),
+		readFileSync(join(ctx.target, ".agent-equip/precommit"), "utf8"),
 	).toContain("bun test");
 });
 

@@ -1,13 +1,13 @@
 ---
 name: tune-precommit
-description: Use when setting up or editing a project's `.ai-setup/precommit` hook — the pre-commit checks the ai-setup `commit` helper runs before every commit. Trigger when creating or modifying `.ai-setup/precommit`, configuring pre-commit lint/format/test checks, deciding whether tests should run on commit, or right after onboarding a project with ai-setup. Covers choosing the project's real lint/format/typecheck/test commands and keeping the gate fast (e.g. skipping or subsetting slow test suites, using parallel tests).
+description: Use when setting up or editing a project's `.agent-equip/precommit` hook — the pre-commit checks the agent-equip `commit` helper runs before every commit. Trigger when creating or modifying `.agent-equip/precommit`, configuring pre-commit lint/format/test checks, deciding whether tests should run on commit, or right after onboarding a project with agent-equip. Covers choosing the project's real lint/format/typecheck/test commands and keeping the gate fast (e.g. skipping or subsetting slow test suites, using parallel tests).
 ---
 
-<!-- managed by ai-setup — edit this file and it becomes yours (ai-setup then stops updating it); customize by adding your own skill alongside instead. -->
+<!-- managed by agent-equip — edit this file and it becomes yours (agent-equip then stops updating it); customize by adding your own skill alongside instead. -->
 
 # Tune the pre-commit hook
 
-`.ai-setup/precommit` is a plain script the ai-setup `commit` helper runs before every commit
+`.agent-equip/precommit` is a plain script the agent-equip `commit` helper runs before every commit
 (it is NOT a git hook). It ships as a generic stub — tailor it to the project so it runs the
 right checks, stays fast, and aborts the commit (non-zero exit) when something is wrong. The
 `commit` helper stages whatever the hook changes, so formatters should run in **write mode**.
@@ -45,5 +45,5 @@ The pre-commit gate must stay fast, or people bypass it.
 
 - Fast and deterministic — this runs on every commit.
 - Non-zero exit aborts the commit.
-- Keep it at `.ai-setup/precommit`, executable, with a `#!/usr/bin/env bash` shebang and
+- Keep it at `.agent-equip/precommit`, executable, with a `#!/usr/bin/env bash` shebang and
   `set -euo pipefail`.

@@ -71,16 +71,16 @@ function applyStrategy(
 			return ensureBlock(
 				dst,
 				readFileSync(src, "utf8"),
-				"<!-- ai-setup >>>",
-				"<!-- ai-setup <<< -->",
+				"<!-- agent-equip >>>",
+				"<!-- agent-equip <<< -->",
 				dryRun,
 			);
 		case "gitignore":
 			return ensureBlock(
 				dst,
 				readFileSync(src, "utf8"),
-				"# ai-setup >>>",
-				"# ai-setup <<<",
+				"# agent-equip >>>",
+				"# agent-equip <<<",
 				dryRun,
 			);
 		case "json":
@@ -128,13 +128,13 @@ export function install(opts: InstallOptions): InstallReport {
 		outcome: ensureBlock(
 			join(target, "AGENTS.md"),
 			assembleAgents(stack),
-			"<!-- ai-setup >>>",
-			"<!-- ai-setup <<< -->",
+			"<!-- agent-equip >>>",
+			"<!-- agent-equip <<< -->",
 			dryRun,
 		),
 	});
 
-	// Record what ai-setup wrote, so the next run can tell pristine files from forked ones.
+	// Record what agent-equip wrote, so the next run can tell pristine files from forked ones.
 	if (!dryRun) saveManifest(target, next);
 
 	const commitHelperMsg = commitHelper

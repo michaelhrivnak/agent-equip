@@ -10,7 +10,7 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { commitHelperPath } from "./assets.ts";
 
-const MARKER = "# ai-setup: commit helper";
+const MARKER = "# agent-equip: commit helper";
 
 /** Add (or refresh) the source line in a shell rc file. Deduped, idempotent, atomic. */
 function addSourceLine(rc: string, line: string): void {
@@ -21,7 +21,7 @@ function addSourceLine(rc: string, line: string): void {
 		.join("\n")
 		.replace(/\n+$/, "");
 	const next = `${kept.length ? `${kept}\n` : ""}${line}\n`;
-	const tmp = `${rc}.ai-setup.tmp`;
+	const tmp = `${rc}.agent-equip.tmp`;
 	writeFileSync(tmp, next);
 	renameSync(tmp, rc); // atomic: readers never see a truncated rc
 }
@@ -43,14 +43,14 @@ function targetRcFiles(home: string): string[] {
 }
 
 /**
- * Install the user-level `commit` helper: copy commit.sh to ~/.config/ai-setup and source it
+ * Install the user-level `commit` helper: copy commit.sh to ~/.config/agent-equip and source it
  * from the shell rc(s). Stable home path (not the workspace), deduped, idempotent. Honors
  * $HOME/$SHELL so it is testable (uses `||` so an empty $HOME falls back to the real home),
  * and deliberately ignores $ZDOTDIR (integrated terminals repoint it).
  */
 export function installCommitHelper(dryRun = false): string {
 	const home = process.env.HOME || homedir();
-	const destDir = join(home, ".config", "ai-setup");
+	const destDir = join(home, ".config", "agent-equip");
 	const dest = join(destDir, "commit.sh");
 	const rcFiles = targetRcFiles(home);
 	const rcLabel = rcFiles.map((f) => basename(f)).join(", ");

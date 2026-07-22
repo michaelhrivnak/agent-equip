@@ -8,11 +8,11 @@
 /.fleet
 /.nova
 
-# dogfood artifacts (this repo installs itself; *.ai-setup-new are install previews)
-*.ai-setup-new
+# dogfood artifacts (this repo installs itself; *.agent-equip-new are install previews)
+*.agent-equip-new
 
-# ai-setup >>>
+# agent-equip >>>
 /CLAUDE.local.md
 /.claude/settings.local.json
-*.ai-setup-new
-# ai-setup <<<
+*.agent-equip-new
+# agent-equip <<<

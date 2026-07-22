@@ -10,7 +10,7 @@ const ctx = useSandbox();
 test("laravel: AGENTS.md includes the Pest testing rule; ships precommit + codifying skill", () => {
 	install({ target: ctx.target, stack: "laravel", commitHelper: false });
 	expect(readFileSync(join(ctx.target, "AGENTS.md"), "utf8")).toContain("Pest");
-	expect(existsSync(join(ctx.target, ".ai-setup/precommit"))).toBe(true);
+	expect(existsSync(join(ctx.target, ".agent-equip/precommit"))).toBe(true);
 	expect(
 		existsSync(
 			join(ctx.target, ".claude/skills/codifying-existing-behavior/SKILL.md"),

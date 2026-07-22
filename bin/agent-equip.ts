@@ -31,7 +31,7 @@ interface InitOptions {
 
 const program = new Command();
 program
-	.name("ai-setup")
+	.name("agent-equip")
 	.description("Seed AI-development tooling into a project, per stack")
 	.version("0.1.0");
 
@@ -49,7 +49,7 @@ program
 	)
 	.option(
 		"--force",
-		"allow installing into the ai-setup repo itself (dogfooding)",
+		"allow installing into the agent-equip repo itself (dogfooding)",
 		false,
 	)
 	.option("--no-packages", "skip the curated per-stack package picker")
@@ -60,20 +60,20 @@ program
 		if (!statSync(target).isDirectory())
 			fail(`target '${targetArg}' is not a directory`);
 		if (!existsSync(join(target, ".git")))
-			console.error(`ai-setup: note: ${target} is not a git repository`);
+			console.error(`agent-equip: note: ${target} is not a git repository`);
 		if (target === REPO_ROOT && !opts.force) {
 			fail(
-				"refusing to install ai-setup into itself (pass --force to dogfood)",
+				"refusing to install agent-equip into itself (pass --force to dogfood)",
 			);
 		}
 
 		if (!opts.yes) {
-			intro("ai-setup");
+			intro("agent-equip");
 			note(
 				"Seeds cross-agent instructions (AGENTS.md) plus a Claude adapter and\n" +
 					"on-demand skills, a `commit` helper, and Conductor scaffolding — tailored\n" +
 					"to your stack and merged safely into files you already have.\n\n" +
-					"When it finishes, run /ai-setup in your agent to onboard the project.",
+					"When it finishes, run /agent-equip in your agent to onboard the project.",
 				"What this does",
 			);
 		}
@@ -107,7 +107,7 @@ program
 		});
 		for (const f of report.files) {
 			const hint =
-				f.outcome === "new-written" ? `  → review ${f.path}.ai-setup-new` : "";
+				f.outcome === "new-written" ? `  → review ${f.path}.agent-equip-new` : "";
 			console.log(`  ${f.outcome.padEnd(12)} ${f.path}${hint}`);
 		}
 		console.log(`  ${report.commitHelper}`);
@@ -118,9 +118,9 @@ program
 
 		if (!opts.dryRun) {
 			note(
-				"Open this project in your agent and run  /ai-setup  to finish setup —\n" +
+				"Open this project in your agent and run  /agent-equip  to finish setup —\n" +
 					"it onboards the repo and tailors the pre-commit + Conductor files.\n" +
-					"(Claude Code: /ai-setup  ·  other agents: follow .ai-setup/setup.md)",
+					"(Claude Code: /agent-equip  ·  other agents: follow .agent-equip/setup.md)",
 				"Next step",
 			);
 		}
@@ -153,7 +153,7 @@ async function handlePackages(
 	}
 	if (opts.yes || !process.stdout.isTTY) {
 		console.log(
-			`  ${missing.length} recommended package(s) available — run 'ai-setup init' interactively to install.`,
+			`  ${missing.length} recommended package(s) available — run 'agent-equip init' interactively to install.`,
 		);
 		return;
 	}
@@ -201,7 +201,7 @@ async function handleAgentTools(
 	// into the target's committed config — just note they're available (matches the package picker).
 	if (opts.yes || !process.stdout.isTTY) {
 		console.log(
-			`  ${missing.length} agent tool(s) available — run 'ai-setup init' interactively to enable them.`,
+			`  ${missing.length} agent tool(s) available — run 'agent-equip init' interactively to enable them.`,
 		);
 		return;
 	}
@@ -224,7 +224,7 @@ async function handleAgentTools(
 }
 
 function fail(msg: string): never {
-	console.error(`ai-setup: ${msg}`);
+	console.error(`agent-equip: ${msg}`);
 	process.exit(1);
 }
 

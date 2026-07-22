@@ -13,7 +13,7 @@ test("fresh install seeds the common layer + assembles AGENTS.md", () => {
 	expect(existsSync(join(ctx.target, "CLAUDE.md"))).toBe(true);
 	expect(existsSync(join(ctx.target, ".conductor/settings.toml"))).toBe(true);
 	expect(readFileSync(join(ctx.target, ".gitignore"), "utf8")).toContain(
-		"# ai-setup >>>",
+		"# agent-equip >>>",
 	);
 });
 
@@ -34,7 +34,7 @@ test("CLAUDE.md is a thin adapter that imports AGENTS.md", () => {
 
 test("ships the onboarding prompt and a Claude /onboard command", () => {
 	install({ target: ctx.target, stack: "laravel", commitHelper: false });
-	expect(existsSync(join(ctx.target, ".ai-setup/onboard.md"))).toBe(true);
+	expect(existsSync(join(ctx.target, ".agent-equip/onboard.md"))).toBe(true);
 	expect(existsSync(join(ctx.target, ".claude/commands/onboard.md"))).toBe(
 		true,
 	);
@@ -50,21 +50,21 @@ test("ships the tailoring skills (tune-precommit, tune-conductor)", () => {
 	).toBe(true);
 });
 
-test("ships the /ai-setup orchestrator (setup prompt + command)", () => {
+test("ships the /agent-equip orchestrator (setup prompt + command)", () => {
 	install({ target: ctx.target, stack: "laravel", commitHelper: false });
-	expect(existsSync(join(ctx.target, ".ai-setup/setup.md"))).toBe(true);
-	expect(existsSync(join(ctx.target, ".claude/commands/ai-setup.md"))).toBe(
+	expect(existsSync(join(ctx.target, ".agent-equip/setup.md"))).toBe(true);
+	expect(existsSync(join(ctx.target, ".claude/commands/agent-equip.md"))).toBe(
 		true,
 	);
 });
 
-test("re-run is idempotent: one block, no *.ai-setup-new", () => {
+test("re-run is idempotent: one block, no *.agent-equip-new", () => {
 	install({ target: ctx.target, stack: "laravel" });
 	install({ target: ctx.target, stack: "laravel" });
 	const claude = readFileSync(join(ctx.target, "CLAUDE.md"), "utf8");
-	expect(claude.match(/ai-setup >>>/g)?.length).toBe(1);
+	expect(claude.match(/agent-equip >>>/g)?.length).toBe(1);
 	expect(
-		walk(ctx.target).filter((f) => f.endsWith(".ai-setup-new")),
+		walk(ctx.target).filter((f) => f.endsWith(".agent-equip-new")),
 	).toHaveLength(0);
 });
 
@@ -74,14 +74,14 @@ test("content above the block is preserved on re-install, even if it mentions th
 	// A user's project context that references the marker string mid-line.
 	writeFileSync(
 		agentsPath,
-		`# My Project\n\nDo not touch the <!-- ai-setup >>> block.\n\n${readFileSync(agentsPath, "utf8")}`,
+		`# My Project\n\nDo not touch the <!-- agent-equip >>> block.\n\n${readFileSync(agentsPath, "utf8")}`,
 	);
 	install({ target: ctx.target, stack: "laravel", commitHelper: false });
 	const after = readFileSync(agentsPath, "utf8");
 	expect(after).toContain("# My Project");
-	expect(after).toContain("Do not touch the <!-- ai-setup >>> block.");
+	expect(after).toContain("Do not touch the <!-- agent-equip >>> block.");
 	// user's mention + the one real block marker
-	expect(after.match(/ai-setup >>>/g)?.length).toBe(2);
+	expect(after.match(/agent-equip >>>/g)?.length).toBe(2);
 });
 
 test("existing CLAUDE.md preserved + block appended once; settings.json merged (existing wins)", () => {
@@ -100,7 +100,7 @@ test("existing CLAUDE.md preserved + block appended once; settings.json merged (
 
 	const claude = readFileSync(join(ctx.target, "CLAUDE.md"), "utf8");
 	expect(claude).toContain("keep me");
-	expect(claude.match(/ai-setup >>>/g)?.length).toBe(1);
+	expect(claude.match(/agent-equip >>>/g)?.length).toBe(1);
 
 	const settings = JSON.parse(
 		readFileSync(join(ctx.target, ".claude/settings.json"), "utf8"),
@@ -110,34 +110,34 @@ test("existing CLAUDE.md preserved + block appended once; settings.json merged (
 	expect(settings.permissions.allow).toContain("Read"); // template permissions merged in
 });
 
-test("existing .ai-setup/precommit is untouched; a *.ai-setup-new is left beside it", () => {
-	mkdirSync(join(ctx.target, ".ai-setup"), { recursive: true });
+test("existing .agent-equip/precommit is untouched; a *.agent-equip-new is left beside it", () => {
+	mkdirSync(join(ctx.target, ".agent-equip"), { recursive: true });
 	writeFileSync(
-		join(ctx.target, ".ai-setup/precommit"),
+		join(ctx.target, ".agent-equip/precommit"),
 		"#!/bin/sh\necho mine\n",
 	);
 	install({ target: ctx.target, stack: "laravel" });
 	expect(
-		readFileSync(join(ctx.target, ".ai-setup/precommit"), "utf8"),
+		readFileSync(join(ctx.target, ".agent-equip/precommit"), "utf8"),
 	).toContain("echo mine");
-	expect(existsSync(join(ctx.target, ".ai-setup/precommit.ai-setup-new"))).toBe(
+	expect(existsSync(join(ctx.target, ".agent-equip/precommit.agent-equip-new"))).toBe(
 		true,
 	);
 });
 
-test("gitignore keeps existing lines and adds the ai-setup block", () => {
+test("gitignore keeps existing lines and adds the agent-equip block", () => {
 	writeFileSync(join(ctx.target, ".gitignore"), "node_modules\n.env\n");
 	install({ target: ctx.target, stack: "laravel" });
 	const gi = readFileSync(join(ctx.target, ".gitignore"), "utf8");
 	expect(gi).toContain("node_modules");
-	expect(gi.match(/# ai-setup >>>/g)?.length).toBe(1);
+	expect(gi.match(/# agent-equip >>>/g)?.length).toBe(1);
 });
 
 test("commit helper installs commit.sh and sources it from ~/.zshrc under zsh", () => {
 	install({ target: ctx.target, stack: "laravel" });
-	expect(existsSync(join(ctx.home, ".config/ai-setup/commit.sh"))).toBe(true);
+	expect(existsSync(join(ctx.home, ".config/agent-equip/commit.sh"))).toBe(true);
 	expect(readFileSync(join(ctx.home, ".zshrc"), "utf8")).toContain(
-		"# ai-setup: commit helper",
+		"# agent-equip: commit helper",
 	);
 });
 
@@ -145,7 +145,7 @@ test("commit helper autodetects bash and sources from ~/.bashrc", () => {
 	process.env.SHELL = "/bin/bash";
 	install({ target: ctx.target, stack: "laravel" });
 	expect(readFileSync(join(ctx.home, ".bashrc"), "utf8")).toContain(
-		"# ai-setup: commit helper",
+		"# agent-equip: commit helper",
 	);
 });
 
@@ -185,7 +185,7 @@ test("merge strategy is chosen by file type, so new stacks' configs merge (not c
 	expect(strategyFor("global.json")).toBe("json");
 	expect(strategyFor(".conductor/settings.toml")).toBe("toml");
 	expect(strategyFor("pyproject.toml")).toBe("toml");
-	expect(strategyFor(".ai-setup/precommit")).toBe("copy");
+	expect(strategyFor(".agent-equip/precommit")).toBe("copy");
 	expect(strategyFor("CLAUDE.local.md.example")).toBe("copy");
 });
 

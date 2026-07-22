@@ -20,7 +20,7 @@ export function useSandbox(shell = "/bin/zsh"): Sandbox {
 	let prevShell: string | undefined;
 
 	beforeEach(() => {
-		ref.sandbox = mkdtempSync(join(tmpdir(), "ai-setup-"));
+		ref.sandbox = mkdtempSync(join(tmpdir(), "agent-equip-"));
 		ref.target = join(ref.sandbox, "proj");
 		ref.home = join(ref.sandbox, "home");
 		mkdirSync(ref.target, { recursive: true });

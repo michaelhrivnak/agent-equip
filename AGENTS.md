@@ -1,4 +1,4 @@
-# ai-setup
+# agent-equip
 
 A Bun + TypeScript CLI that seeds AI-development tooling into existing projects, per stack. It
 installs config (AGENTS.md, a Claude adapter + skills, a commit helper, a precommit hook,
@@ -6,7 +6,7 @@ Conductor scaffolding) into a target repo. See `README.md` for the full overview
 
 ## Project structure
 
-- `bin/ai-setup.ts` — CLI entry (commander + @clack/prompts): `init [target] --stack <name>`, `list`.
+- `bin/agent-equip.ts` — CLI entry (commander + @clack/prompts): `init [target] --stack <name>`, `list`.
 - `src/` — install logic: `install.ts` (orchestrator + per-type merge routing), `merge.ts`
   (merge strategies), `templates.ts` (layer composition + AGENTS.md assembly + stack metadata),
   `packages.ts` (curated packages), `commitHelper.ts` (user-level helper install), `paths.ts`.
@@ -22,7 +22,7 @@ Conductor scaffolding) into a target repo. See `README.md` for the full overview
 - **AGENTS.md assembly** (`src/templates.ts` → `assembleAgents`) — canonical cross-agent
   instructions built from `templates/<layer>/rules/*.md` fragments.
 - **Curated per-stack package install** (`src/packages.ts`) — detect + offer + run (e.g. Boost).
-- **User-level `commit` helper** (`src/commitHelper.ts`) — installed to `~/.config/ai-setup`.
+- **User-level `commit` helper** (`src/commitHelper.ts`) — installed to `~/.config/agent-equip`.
 - **Conductor scaffolding** — `.conductor/` in the payload.
 
 ## Conventions that differ from Bun/TS norms
@@ -30,8 +30,8 @@ Conductor scaffolding) into a target repo. See `README.md` for the full overview
 - Formatting/lint is **Biome with tabs** (not Prettier / 2-space). `bun run lint` is strict
   (`--error-on-warnings`); `bun run fix` = `biome check --write`.
 - The repo **dogfoods its own installer** — root `AGENTS.md`, `CLAUDE.md`, `.claude/`,
-  `.conductor/`, `.ai-setup/` are GENERATED via `bun run bin/ai-setup.ts init . --stack bun-cli
-  --force --project-only`. Do NOT hand-edit inside the managed ai-setup blocks; edit the
+  `.conductor/`, `.agent-equip/` are GENERATED via `bun run bin/agent-equip.ts init . --stack bun-cli
+  --force --project-only`. Do NOT hand-edit inside the managed agent-equip blocks; edit the
   `templates/` sources and re-run.
 - Adding a stack is **pure data** — a `templates/<name>/` folder (+ optional `stack.json`,
   `packages.json`, `rules/*.md`, `test/<name>/`); no `src/` changes.
@@ -41,9 +41,9 @@ Conductor scaffolding) into a target repo. See `README.md` for the full overview
 ## Running it
 
 - `bun install`; `bun test`; `bun run lint` / `bun run typecheck` / `bun run fix`.
-- Drive the CLI: `bun run bin/ai-setup.ts init <target> --stack <name>` (`--dry-run` to preview).
+- Drive the CLI: `bun run bin/agent-equip.ts init <target> --stack <name>` (`--dry-run` to preview).
 
-<!-- ai-setup >>> (managed by ai-setup — content between these markers may be overwritten on re-install) -->
+<!-- agent-equip >>> (managed by agent-equip — content between these markers may be overwritten on re-install) -->
 Personal or global agent instructions take precedence over the project conventions below. On any conflict, follow the personal instruction and say so.
 
 # Git
@@ -96,4 +96,4 @@ trivial tasks, use judgment.
 
 - Never read `.env` or other real secret files — they hold live credentials.
 - Read `.env.example` instead for variable names and structure; ask the user for real values.
-<!-- ai-setup <<< -->
+<!-- agent-equip <<< -->

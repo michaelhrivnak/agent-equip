@@ -29,7 +29,7 @@ export function stackMeta(stack: string): StackMeta {
 		};
 	} catch {
 		console.warn(
-			`ai-setup: templates/${stack}/stack.json is not valid JSON — using the stack name.`,
+			`agent-equip: templates/${stack}/stack.json is not valid JSON — using the stack name.`,
 		);
 		return fallback;
 	}
@@ -60,8 +60,8 @@ export function composeFiles(stack: string): Map<string, string> {
 }
 
 const AGENTS_START =
-	"<!-- ai-setup >>> (managed by ai-setup — content between these markers may be overwritten on re-install) -->";
-const AGENTS_END = "<!-- ai-setup <<< -->";
+	"<!-- agent-equip >>> (managed by agent-equip — content between these markers may be overwritten on re-install) -->";
+const AGENTS_END = "<!-- agent-equip <<< -->";
 
 /**
  * Build the canonical, cross-agent AGENTS.md content (marked block) by concatenating the

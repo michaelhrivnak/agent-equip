@@ -1,10 +1,10 @@
-# ai-setup
+# agent-equip
 
 > A quickstart CLI that seeds AI-development tooling into your projects — per stack.
 
-[![CI](https://github.com/michaelhrivnak/ai-setup/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelhrivnak/ai-setup/actions/workflows/ci.yml)
+[![CI](https://github.com/michaelhrivnak/agent-equip/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelhrivnak/agent-equip/actions/workflows/ci.yml)
 
-`ai-setup` drops a consistent set of AI-assisted development tooling into a target project —
+`agent-equip` drops a consistent set of AI-assisted development tooling into a target project —
 cross-agent instructions (`AGENTS.md`), Claude Code config and on-demand skills, a `commit`
 shell helper, a pre-commit hook, and [Conductor](https://conductor.build) workspace
 scaffolding — tailored to the project's stack. It merges safely into files that already exist
@@ -13,7 +13,7 @@ and can recommend & install curated packages for the stack.
 ## About
 
 Setting up the same AI tooling by hand in every repo is tedious and drifts over time.
-`ai-setup` makes it one command: pick your stack, and it installs a consistent AI-assistant
+`agent-equip` makes it one command: pick your stack, and it installs a consistent AI-assistant
 setup into your project (plus a small `commit` helper into your shell). Re-run it any time to
 stay current — it never clobbers your own edits.
 
@@ -26,7 +26,7 @@ roadmap. Built with [Bun](https://bun.sh) + TypeScript.
   agent-neutral layer. Everything on top is Claude-specific today: the `CLAUDE.md` adapter,
   on-demand skills, slash commands, permissions, and commit-message generation (per-agent
   adapters for other agents are on the roadmap, M3).
-- **One-command project setup** — run `/ai-setup` in your agent and it onboards the repo (writes
+- **One-command project setup** — run `/agent-equip` in your agent and it onboards the repo (writes
   a project-context doc into `AGENTS.md`: structure, key features, and the conventions that
   *differ* from your stack's norms) and tailors the pre-commit + Conductor files to the project.
 - **Stack-aware** — tailors those instructions, rules, and recommendations to your project's
@@ -54,23 +54,23 @@ roadmap. Built with [Bun](https://bun.sh) + TypeScript.
 Clone and install dependencies:
 
 ```sh
-git clone <repo-url> ai-setup && cd ai-setup
+git clone <repo-url> agent-equip && cd agent-equip
 bun install
 ```
 
 Install tooling into a project (interactive — prompts for the stack if omitted):
 
 ```sh
-bun run bin/ai-setup.ts init /path/to/project --stack laravel
+bun run bin/agent-equip.ts init /path/to/project --stack laravel
 ```
 
 List available stacks:
 
 ```sh
-bun run bin/ai-setup.ts list
+bun run bin/agent-equip.ts list
 ```
 
-> A standalone binary (`bun build --compile`) and/or `npx ai-setup` are planned so you won't
+> A standalone binary (`bun build --compile`) and/or `npx agent-equip` are planned so you won't
 > need to clone this repo to use it.
 
 ### `init` options
@@ -83,59 +83,59 @@ bun run bin/ai-setup.ts list
 | `--project-only` | Seed project files only; skip the user-level `commit` helper |
 | `--no-packages` | Skip the curated package picker |
 | `--no-agent-tools` | Skip the agent-tools picker (plugins / MCP / hooks) |
-| `--force` | Allow installing into the ai-setup repo itself (dogfooding) |
+| `--force` | Allow installing into the agent-equip repo itself (dogfooding) |
 
 ### What gets installed
 
 Into the **target project**:
 
 - `AGENTS.md` — shared, cross-agent instructions assembled from the stack's rules (a managed
-  `ai-setup` block; your own content is preserved).
+  `agent-equip` block; your own content is preserved).
 - `CLAUDE.md` — a thin adapter that imports `AGENTS.md` for Claude Code.
 - `.claude/` — Claude-specific settings and on-demand skills.
-- `.gitignore` — a managed `ai-setup` block for the files above.
+- `.gitignore` — a managed `agent-equip` block for the files above.
 - `.conductor/` — `settings.toml` plus a `setup.sh` stub for Conductor workspace setup.
-- `.ai-setup/precommit` — a lint/format hook the `commit` helper runs (kept out of the repo
+- `.agent-equip/precommit` — a lint/format hook the `commit` helper runs (kept out of the repo
   root to avoid clutter).
-- `.ai-setup/` prompts (`setup.md`, `onboard.md`) and matching `/ai-setup` + `/onboard` commands,
+- `.agent-equip/` prompts (`setup.md`, `onboard.md`) and matching `/agent-equip` + `/onboard` commands,
   plus the `tune-precommit` / `tune-conductor` skills — the guided setup (see "Finish setup" below).
 - `CLAUDE.local.md.example` — copy to `CLAUDE.local.md` for personal, gitignored overrides.
 
 Into your **home directory** (once, machine-level):
 
-- `~/.config/ai-setup/commit.sh` and a source line added to `~/.zshrc` and/or `~/.bashrc`
+- `~/.config/agent-equip/commit.sh` and a source line added to `~/.zshrc` and/or `~/.bashrc`
   (autodetected from your shell).
 
 ### Ownership: what stays current vs. what you take over
 
-ai-setup ships a **library it keeps current** and a **scaffold it hands over**:
+agent-equip ships a **library it keeps current** and a **scaffold it hands over**:
 
 | File | Owner | On re-run |
 | --- | --- | --- |
-| `AGENTS.md` rules block, `CLAUDE.md`, skills, `/commands`, `.ai-setup/*.md` prompts | product | refreshed while pristine; **your edit forks it** and updates stop |
-| `.ai-setup/precommit`, `.conductor/*` | team | seeded as smart defaults, then yours the moment you edit them |
+| `AGENTS.md` rules block, `CLAUDE.md`, skills, `/commands`, `.agent-equip/*.md` prompts | product | refreshed while pristine; **your edit forks it** and updates stop |
+| `.agent-equip/precommit`, `.conductor/*` | team | seeded as smart defaults, then yours the moment you edit them |
 | `.claude/settings.json` (permissions + tool picks) | mixed | deep-merged every run; your values always win |
-| `.gitignore` | shared | managed `ai-setup` block only; the rest is yours |
+| `.gitignore` | shared | managed `agent-equip` block only; the rest is yours |
 
 **The contract:** a file you haven't touched stays current on re-run; a file you've edited is
-yours — ai-setup never modifies it again (and won't nag with `*.ai-setup-new` for it). Two ways to
+yours — agent-equip never modifies it again (and won't nag with `*.agent-equip-new` for it). Two ways to
 customize:
 
 - **Extend prose alongside it** — add project context *above* the `AGENTS.md` block, use
   `CLAUDE.local.md`, or add your own skills/commands. This keeps the product prose updatable.
-- **Edit the scaffold directly** — `.ai-setup/precommit`, the Conductor files, permissions. That's
+- **Edit the scaffold directly** — `.agent-equip/precommit`, the Conductor files, permissions. That's
   what it's for; editing is how you take ownership.
 
-ai-setup tracks the sha of each whole file it wrote in `.ai-setup/manifest.json` (committed) to
+agent-equip tracks the sha of each whole file it wrote in `.agent-equip/manifest.json` (committed) to
 tell pristine files from forked ones. Marked-block files (`AGENTS.md`, `CLAUDE.md`, `.gitignore`)
 instead refresh just their block, always preserving your surrounding content. A pre-existing file
-ai-setup didn't create is never overwritten — you get a `*.ai-setup-new` copy to reconcile once.
+agent-equip didn't create is never overwritten — you get a `*.agent-equip-new` copy to reconcile once.
 
 ### The `commit` helper
 
 Once installed, `commit` (from any repo):
 
-1. runs `.ai-setup/precommit` (lint/format) and aborts if it fails,
+1. runs `.agent-equip/precommit` (lint/format) and aborts if it fails,
 2. stages everything,
 3. uses the `claude` CLI to write a one-line message from the staged diff — with retry / type-
    your-own / abort if generation fails — and prefixes a branch ticket id (e.g. `ABC-123`) when
@@ -143,13 +143,13 @@ Once installed, `commit` (from any repo):
 
 ### Curated packages
 
-After seeding files, `ai-setup` checks the target for stack-relevant packages it doesn't yet
+After seeding files, `agent-equip` checks the target for stack-relevant packages it doesn't yet
 have (declared in `templates/<stack>/packages.json`) and offers a checklist. It shows the exact
 install commands and only runs the ones you confirm.
 
 ### Recommended agent tools
 
-`ai-setup` also offers an interactive picker of agent tooling — Claude plugins, MCP servers, and
+`agent-equip` also offers an interactive picker of agent tooling — Claude plugins, MCP servers, and
 hooks (declared in `templates/<stack>/agent-tools.json`) — applying the ones you select to
 `.claude/settings.json` and/or `.mcp.json`. Nothing third-party is written without your choice:
 under `--yes` or when the output isn't a terminal it only reports what's available. Skip it with
@@ -164,14 +164,14 @@ outside any reachable `.env` file.
 
 ### Finish setup in your agent
 
-After `init` seeds the files, open the project in your agent and run **`/ai-setup`** (Claude
-Code) — or follow `.ai-setup/setup.md` in any agent. It does the whole setup in one pass, with
+After `init` seeds the files, open the project in your agent and run **`/agent-equip`** (Claude
+Code) — or follow `.agent-equip/setup.md` in any agent. It does the whole setup in one pass, with
 minimal questions:
 
 1. **Onboard** — explores the repo and writes your **project context** into `AGENTS.md`, above
    the managed block: structure, the most important features, and the conventions that *differ*
    from your stack's defaults (the highest-signal part for future agents).
-2. **Tailor the pre-commit** — sets `.ai-setup/precommit` to the project's real
+2. **Tailor the pre-commit** — sets `.agent-equip/precommit` to the project's real
    format/lint/type-check/test commands (subsetting or skipping a slow suite).
 3. **Tailor Conductor** — fills `.conductor/setup.sh` + `settings.toml` (deps, database, local
    services, run scripts, ports, parallel-safety).
@@ -180,11 +180,11 @@ The pieces are also available individually — `/onboard` (context only) and the
 `tune-conductor` skills — and everything is re-runnable to refresh as the project evolves.
 
 `AGENTS.md` ends up with two parts: your **project context** (above the managed block, yours to
-own) and the generic guardrail-rules **`ai-setup` block** (refreshed on re-install).
+own) and the generic guardrail-rules **`agent-equip` block** (refreshed on re-install).
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) — and the [GitHub milestones](https://github.com/michaelhrivnak/ai-setup/milestones) — for what's planned.
+See [ROADMAP.md](ROADMAP.md) — and the [GitHub milestones](https://github.com/michaelhrivnak/agent-equip/milestones) — for what's planned.
 
 ## Contributing
 
@@ -201,7 +201,7 @@ bun run typecheck # tsc --noEmit
 ```
 
 CI runs lint + typecheck + tests on pushes to `main` and on every PR. The repo dogfoods its own installer via
-the `bun-cli` stack, so `./.ai-setup/precommit` runs the same checks locally.
+the `bun-cli` stack, so `./.agent-equip/precommit` runs the same checks locally.
 
 ### Adding a stack
 
@@ -213,7 +213,7 @@ the `bun-cli` stack, so `./.ai-setup/precommit` runs the same checks locally.
    `templates/<name>/packages.json` to curate installable packages.
 3. Add tests under `test/<name>/`.
 
-It then appears in `ai-setup list` and `--stack <name>` automatically.
+It then appears in `agent-equip list` and `--stack <name>` automatically.
 
 ## License
 

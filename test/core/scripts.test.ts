@@ -7,7 +7,7 @@ import { COMMIT_HELPER_SRC, TEMPLATES_DIR } from "../../src/paths.ts";
 function shellScripts(): string[] {
 	const scripts = [COMMIT_HELPER_SRC];
 	for (const layer of readdirSync(TEMPLATES_DIR)) {
-		for (const rel of [".ai-setup/precommit", ".conductor/setup.sh"]) {
+		for (const rel of [".agent-equip/precommit", ".conductor/setup.sh"]) {
 			const file = join(TEMPLATES_DIR, layer, rel);
 			if (existsSync(file)) scripts.push(file);
 		}

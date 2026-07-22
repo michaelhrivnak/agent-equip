@@ -3,11 +3,11 @@
 [scripts]
 # Runs when Conductor creates a workspace. Flesh out .conductor/setup.sh per project.
 setup = "bash .conductor/setup.sh"
-# ai-setup post-generation customization (tune-conductor): this repo is workspace-isolable —
+# agent-equip post-generation customization (tune-conductor): this repo is workspace-isolable —
 # hermetic tests (temp dirs + overridden $HOME), no server/ports/DB — so concurrent is safe.
 run_mode = "concurrent"
 
-# ai-setup post-generation customization (tune-conductor): real run scripts for this Bun CLI repo.
+# agent-equip post-generation customization (tune-conductor): real run scripts for this Bun CLI repo.
 [scripts.run.test]
 command = "bun test"
 icon = "flask-conical"

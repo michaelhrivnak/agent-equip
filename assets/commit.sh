@@ -1,6 +1,6 @@
 # commit — run the project's pre-commit checks, stage everything, and commit.
 #
-# Works in bash and zsh. The ai-setup installer copies this to ~/.config/ai-setup/commit.sh
+# Works in bash and zsh. The agent-equip installer copies this to ~/.config/agent-equip/commit.sh
 # and sources it from your shell rc (~/.zshrc and/or ~/.bashrc). Use it from any repo, any
 # subdirectory:
 #
@@ -9,7 +9,7 @@
 #
 # Behavior:
 #   - Resolves the repo root, so it works from a subdirectory.
-#   - Runs .ai-setup/precommit (or legacy ./precommit) at the repo root first; a non-zero exit
+#   - Runs .agent-equip/precommit (or legacy ./precommit) at the repo root first; a non-zero exit
 #     aborts the commit. This is separate from git hooks.
 #   - Stages everything repo-wide (git add -A), including fixes the pre-commit step made.
 #   - With no message, the Claude CLI (if installed) writes a one-line message from the staged
@@ -25,8 +25,8 @@ commit() {
 
     # 1. Project pre-commit checks (not a git hook) — run at the repo root; abort if they fail.
     local precommit=""
-    if [ -f "$root/.ai-setup/precommit" ]; then
-        precommit="$root/.ai-setup/precommit"
+    if [ -f "$root/.agent-equip/precommit" ]; then
+        precommit="$root/.agent-equip/precommit"
     elif [ -f "$root/precommit" ]; then
         precommit="$root/precommit"
     fi

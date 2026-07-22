@@ -21,7 +21,7 @@ export function loadPackages(stack: string): PackageDef[] {
 		return parsed.packages ?? [];
 	} catch {
 		console.warn(
-			`ai-setup: templates/${stack}/packages.json is not valid JSON — ignoring it.`,
+			`agent-equip: templates/${stack}/packages.json is not valid JSON — ignoring it.`,
 		);
 		return [];
 	}
