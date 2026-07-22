@@ -6,7 +6,18 @@ on:
   pull_request:
 
 jobs:
+  # Fast gate: lint + typecheck run once. The heavier test matrix only starts if these pass.
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run typecheck
+
   test:
+    needs: checks
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -18,9 +29,7 @@ jobs:
         with:
           bun-version: ${{ matrix.bun-version }}
       - run: bun install --frozen-lockfile
-      - run: bun run lint
-      - run: bun run typecheck
-      - run: bun test
+      - run: bun run test:coverage
 
   # Build the Node bundle and pack the tarball (needs bun as the build toolchain), then hand the
   # tarball to a separate job to install + run — so packaging problems (a missing `files` entry)

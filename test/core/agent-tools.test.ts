@@ -1,5 +1,11 @@
-import { expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { expect, spyOn, test } from "bun:test";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import {
 	type AgentToolDef,
@@ -9,6 +15,7 @@ import {
 	missingAgentTools,
 } from "../../src/agentTools.ts";
 import { install } from "../../src/install.ts";
+import { TEMPLATES_DIR } from "../../src/paths.ts";
 import { useSandbox } from "../helpers.ts";
 
 const ctx = useSandbox();
@@ -34,6 +41,29 @@ test("recommends caveman and rtk when the target has nothing configured", () => 
 	const ids = missingAgentTools(ctx.target, "bun-cli").map((t) => t.id);
 	expect(ids).toContain("caveman");
 	expect(ids).toContain("rtk");
+});
+
+test("isConfigured treats a malformed .claude/settings.json as empty (no crash)", () => {
+	mkdirSync(join(ctx.target, ".claude"), { recursive: true });
+	writeFileSync(join(ctx.target, ".claude/settings.json"), "{ not valid json");
+	// A plugin-type tool reads settings via readJson; malformed → {} → simply "not configured".
+	expect(isConfigured(ctx.target, byId("caveman"))).toBe(false);
+});
+
+test("loadAgentTools ignores a layer whose agent-tools.json is invalid JSON (warns, keeps the rest)", () => {
+	const layer = "__agenttools_badjson_test__";
+	const dir = join(TEMPLATES_DIR, layer);
+	const warn = spyOn(console, "warn").mockImplementation(() => {});
+	try {
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, "agent-tools.json"), "{ not valid json");
+		const ids = loadAgentTools(layer).map((t) => t.id); // common (valid) + this layer (bad)
+		expect(warn).toHaveBeenCalled();
+		expect(ids).toContain("caveman"); // common-layer tools still load
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+		warn.mockRestore();
+	}
 });
 
 test("does not recommend a plugin that is already enabled", () => {

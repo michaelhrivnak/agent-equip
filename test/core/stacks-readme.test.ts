@@ -18,3 +18,9 @@ test("every supported stack is listed in the README block", () => {
 		expect(readme).toContain(`\`--stack ${stack}\``);
 	}
 });
+
+test("updateReadme throws when the stacks markers are missing", () => {
+	expect(() => updateReadme("# README\n\nno markers here\n")).toThrow(
+		"stacks:start / stacks:end markers not found",
+	);
+});
