@@ -1,8 +1,9 @@
 # agent-equip
 
 A Bun + TypeScript CLI that seeds AI-development tooling into existing projects, per stack. It
-installs config (AGENTS.md, a Claude adapter + skills, a commit helper, a precommit hook,
-Conductor scaffolding) into a target repo. See `README.md` for the full overview.
+installs config (AGENTS.md with an on-demand skills index, agent-agnostic skill bodies plus
+per-agent adapters, a commit helper, a precommit hook, Conductor scaffolding) into a target
+repo. See `README.md` for the full overview.
 
 ## Project structure
 
@@ -20,7 +21,12 @@ Conductor scaffolding) into a target repo. See `README.md` for the full overview
 - **Seed a stack's tooling into a target** (`src/install.ts`) — the core flow: compose
   common+stack, merge safely into existing files, assemble `AGENTS.md`.
 - **AGENTS.md assembly** (`src/templates.ts` → `assembleAgents`) — canonical cross-agent
-  instructions built from `templates/<layer>/rules/*.md` fragments.
+  instructions built from `templates/<layer>/rules/*.md` fragments, plus an on-demand **Skills
+  index** (`composeSkills`) pointing at the neutral skill bodies.
+- **Agent-agnostic skills** (`src/install.ts`) — author once under `templates/<layer>/skills/`;
+  the body ships to `.agent-equip/skills/<name>.md` and is indexed in AGENTS.md for any agent
+  (e.g. Codex), while selected agents also get a native copy (Claude → `.claude/skills/`). The
+  `init --agents` multi-select gates the per-agent adapters.
 - **Curated per-stack package install** (`src/packages.ts`) — detect + offer + run (e.g. Boost).
 - **User-level `commit` helper** (`src/commitHelper.ts`) — installed to `~/.config/agent-equip`.
 - **Conductor scaffolding** — `.conductor/` in the payload.
@@ -34,9 +40,12 @@ Conductor scaffolding) into a target repo. See `README.md` for the full overview
   --force --project-only`. Do NOT hand-edit inside the managed agent-equip blocks; edit the
   `templates/` sources and re-run.
 - Adding a stack is **pure data** — a `templates/<name>/` folder (+ optional `stack.json`,
-  `packages.json`, `rules/*.md`, `test/<name>/`); no `src/` changes.
+  `packages.json`, `rules/*.md`, `skills/<name>/skill.md`, `test/<name>/`); no `src/` changes.
 - Rules are authored as small `templates/<layer>/rules/*.md` fragments and assembled into one
   `AGENTS.md`; they are NOT seeded as separate files.
+- Skills are authored agent-agnostically as `templates/<layer>/skills/<name>/skill.md` (a stack
+  skill overrides a common one of the same name). They are NOT seeded verbatim — the installer
+  emits `.agent-equip/skills/<name>.md`, the AGENTS.md Skills index, and per-agent copies.
 
 ## Running it
 
@@ -96,4 +105,13 @@ trivial tasks, use judgment.
 
 - Never read `.env` or other real secret files — they hold live credentials.
 - Read `.env.example` instead for variable names and structure; ask the user for real values.
+
+# Skills
+
+On-demand skill instructions. When a task matches a skill's description, read that skill's file before proceeding.
+
+- **codifying-existing-behavior** — Use when modifying existing business logic — refactoring, fixing bugs, or changing the behavior of an existing function, method, service, module, class, handler, job, or endpoint. Mandates writing a test that codifies current behavior (or reproduces the bug) BEFORE touching production code. For bugs, the test starts red. For non-bug changes, the test starts green and stays green-with-new-assertions after the change. Skip for UI/visual tweaks, copy/comment/formatting changes, pure additions of new functions or classes, dependency bumps, and code with no reasonable test seam. Read `.agent-equip/skills/codifying-existing-behavior.md` before acting.
+- **test-driven-development** — Use when building NEW behavior — implementing a new function, method, endpoint, component, command, or feature where a test can express the intended behavior up front. Drives a red → green → refactor loop: write a failing test for the next slice of behavior, make it pass with the minimal code, then refactor with the test green. For changing or fixing EXISTING behavior, use the codifying-existing-behavior skill instead. Skip for throwaway spikes, pure config/generated code, UI/visual-only tweaks, and glue with no reasonable test seam. Read `.agent-equip/skills/test-driven-development.md` before acting.
+- **tune-conductor** — Use when setting up or editing a project's Conductor files installed by agent-equip — `.conductor/setup.sh` (runs when a new Conductor workspace/worktree is created) and `.conductor/settings.toml` (setup command, run scripts, run mode). Trigger when configuring Conductor for the project, editing `.conductor/setup.sh` or `.conductor/settings.toml`, wiring dev/test/worker run scripts, deciding concurrent vs nonconcurrent, handling ports/DB for parallel workspaces, or right after onboarding a project with agent-equip. For deep Conductor reference see https://conductor.build/docs. Read `.agent-equip/skills/tune-conductor.md` before acting.
+- **tune-precommit** — Use when setting up or editing a project's `.agent-equip/precommit` hook — the pre-commit checks the agent-equip `commit` helper runs before every commit. Trigger when creating or modifying `.agent-equip/precommit`, configuring pre-commit lint/format/test checks, deciding whether tests should run on commit, or right after onboarding a project with agent-equip. Covers choosing the project's real lint/format/typecheck/test commands and keeping the gate fast (e.g. skipping or subsetting slow test suites, using parallel tests). Read `.agent-equip/skills/tune-precommit.md` before acting.
 <!-- agent-equip <<< -->

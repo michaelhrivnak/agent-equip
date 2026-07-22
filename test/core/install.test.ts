@@ -40,14 +40,59 @@ test("ships the onboarding prompt and a Claude /onboard command", () => {
 	);
 });
 
-test("ships the tailoring skills (tune-precommit, tune-conductor)", () => {
+test("ships the tailoring skills as neutral bodies + Claude copies", () => {
 	install({ target: ctx.target, stack: "laravel", commitHelper: false });
+	// Agnostic canonical bodies — always written.
+	expect(
+		existsSync(join(ctx.target, ".agent-equip/skills/tune-precommit.md")),
+	).toBe(true);
+	expect(
+		existsSync(join(ctx.target, ".agent-equip/skills/tune-conductor.md")),
+	).toBe(true);
+	// Claude native copies — default agents include Claude.
 	expect(
 		existsSync(join(ctx.target, ".claude/skills/tune-precommit/SKILL.md")),
 	).toBe(true);
 	expect(
 		existsSync(join(ctx.target, ".claude/skills/tune-conductor/SKILL.md")),
 	).toBe(true);
+});
+
+test("ships the new test-driven-development skill", () => {
+	install({ target: ctx.target, stack: "laravel", commitHelper: false });
+	expect(
+		existsSync(
+			join(ctx.target, ".claude/skills/test-driven-development/SKILL.md"),
+		),
+	).toBe(true);
+});
+
+test("AGENTS.md carries the skills index pointing at .agent-equip/skills", () => {
+	install({ target: ctx.target, stack: "laravel", commitHelper: false });
+	const agents = readFileSync(join(ctx.target, "AGENTS.md"), "utf8");
+	expect(agents).toContain("# Skills");
+	expect(agents).toContain(
+		"`.agent-equip/skills/test-driven-development.md`",
+	);
+});
+
+test("agent selection gates the Claude adapter; the neutral body ships regardless", () => {
+	install({
+		target: ctx.target,
+		stack: "laravel",
+		commitHelper: false,
+		agents: ["codex"],
+	});
+	expect(
+		existsSync(
+			join(ctx.target, ".agent-equip/skills/test-driven-development.md"),
+		),
+	).toBe(true);
+	expect(
+		existsSync(
+			join(ctx.target, ".claude/skills/test-driven-development/SKILL.md"),
+		),
+	).toBe(false);
 });
 
 test("ships the /agent-equip orchestrator (setup prompt + command)", () => {

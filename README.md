@@ -5,9 +5,9 @@
 [![CI](https://github.com/michaelhrivnak/agent-equip/actions/workflows/ci.yml/badge.svg)](https://github.com/michaelhrivnak/agent-equip/actions/workflows/ci.yml)
 
 `agent-equip` drops a consistent set of AI-assisted development tooling into a target project —
-cross-agent instructions (`AGENTS.md`), Claude Code config and on-demand skills, a `commit`
-shell helper, a pre-commit hook, and [Conductor](https://conductor.build) workspace
-scaffolding — tailored to the project's stack. It merges safely into files that already exist
+cross-agent instructions (`AGENTS.md`), agent-agnostic on-demand skills, per-agent adapters for
+the agents you pick, a `commit` shell helper, a pre-commit hook, and
+[Conductor](https://conductor.build) workspace scaffolding — tailored to the project's stack. It merges safely into files that already exist
 and can recommend & install curated packages for the stack.
 
 ## About
@@ -30,10 +30,13 @@ More stacks (e.g. .NET) are on the [roadmap](ROADMAP.md).
 
 ## Features
 
-- **Cross-agent instructions** — `AGENTS.md` (read by most coding agents) is the canonical,
-  agent-neutral layer. Everything on top is Claude-specific today: the `CLAUDE.md` adapter,
-  on-demand skills, slash commands, permissions, and commit-message generation (per-agent
-  adapters for other agents are on the roadmap, M3).
+- **Cross-agent instructions + agnostic skills** — `AGENTS.md` (read by most coding agents) is
+  the canonical, agent-neutral layer, and it now carries an on-demand **Skills index** any
+  AGENTS.md-reading agent (e.g. Codex) can use. Skill bodies are authored once, agent-agnostic;
+  `init --agents` lets you pick which agents also get a native adapter (Claude Code today →
+  `.claude/skills` + slash commands). Other Claude-only pieces (the `CLAUDE.md` adapter,
+  permissions, commit-message generation) remain Claude-specific; broader per-agent adapters are
+  on the roadmap.
 - **One-command project setup** — run `/agent-equip` in your agent and it onboards the repo (writes
   a project-context doc into `AGENTS.md`: structure, key features, and the conventions that
   *differ* from your stack's norms) and tailors the pre-commit + Conductor files to the project.
@@ -114,7 +117,10 @@ Into the **target project**:
 - `AGENTS.md` — shared, cross-agent instructions assembled from the stack's rules (a managed
   `agent-equip` block; your own content is preserved).
 - `CLAUDE.md` — a thin adapter that imports `AGENTS.md` for Claude Code.
-- `.claude/` — Claude-specific settings and on-demand skills.
+- `.claude/` — Claude Code adapter: settings, slash commands, and native copies of the on-demand
+  skills (written only when Claude is a selected agent).
+- `.agent-equip/skills/` — agent-agnostic skill bodies, referenced by the `AGENTS.md` **Skills
+  index** so any agent (e.g. Codex) can load them on demand.
 - `.gitignore` — a managed `agent-equip` block for the files above.
 - `.conductor/` — `settings.toml` plus a `setup.sh` stub for Conductor workspace setup.
 - `.agent-equip/precommit` — a lint/format hook the `commit` helper runs (kept out of the repo
