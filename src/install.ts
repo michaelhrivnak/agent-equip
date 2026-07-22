@@ -8,7 +8,12 @@ import {
 	mergeJson,
 	type Outcome,
 } from "./merge.ts";
-import { assembleAgents, composeFiles } from "./templates.ts";
+import { assembleAgents, composeFiles, composeSkills } from "./templates.ts";
+
+/** Agents whose native adapters agent-equip can emit. `codex` needs no per-agent files — it
+ * reads the AGENTS.md skills index — so only `claude` gates a native skill directory today. */
+export const KNOWN_AGENTS = ["claude", "codex"] as const;
+export type Agent = (typeof KNOWN_AGENTS)[number];
 
 export interface InstallOptions {
 	target: string;
@@ -16,6 +21,8 @@ export interface InstallOptions {
 	dryRun?: boolean;
 	/** Install the user-level commit helper into the shell rc (default true). */
 	commitHelper?: boolean;
+	/** Agents to target; gates per-agent native adapters (default: all known agents). */
+	agents?: readonly string[];
 }
 
 export interface FileAction {
@@ -96,7 +103,13 @@ function applyStrategy(
 
 /** Seed the composed common+stack template into the target project. */
 export function install(opts: InstallOptions): InstallReport {
-	const { target, stack, dryRun = false, commitHelper = true } = opts;
+	const {
+		target,
+		stack,
+		dryRun = false,
+		commitHelper = true,
+		agents = KNOWN_AGENTS,
+	} = opts;
 	const files: FileAction[] = [];
 	const prev = loadManifest(target);
 	const next: Manifest = {};
@@ -108,6 +121,8 @@ export function install(opts: InstallOptions): InstallReport {
 		if (METADATA.has(rel)) continue;
 		// rules/*.md are assembled into AGENTS.md, not seeded as individual files.
 		if (rel.startsWith("rules/")) continue;
+		// skills/ are emitted below (neutral body + per-agent copies), not copied verbatim.
+		if (rel.startsWith("skills/")) continue;
 		const targetRel = RENAMES[rel] ?? rel;
 		files.push({
 			path: targetRel,
@@ -120,6 +135,28 @@ export function install(opts: InstallOptions): InstallReport {
 				next,
 			),
 		});
+	}
+
+	// Skills: one canonical body per skill, always written to the agnostic `.agent-equip/skills/`
+	// (referenced by the AGENTS.md skills index). Agents with a native skill format get a copy
+	// too — currently just Claude's `.claude/skills/<name>/SKILL.md`. Same markdown, both paths.
+	const emit = (targetRel: string, src: string): void => {
+		files.push({
+			path: targetRel,
+			outcome: applyStrategy(
+				targetRel,
+				src,
+				join(target, targetRel),
+				dryRun,
+				prev,
+				next,
+			),
+		});
+	};
+	for (const skill of composeSkills(stack)) {
+		emit(`.agent-equip/skills/${skill.name}.md`, skill.bodyPath);
+		if (agents.includes("claude"))
+			emit(`.claude/skills/${skill.name}/SKILL.md`, skill.bodyPath);
 	}
 
 	// AGENTS.md — canonical, cross-agent instructions assembled from the rules fragments.

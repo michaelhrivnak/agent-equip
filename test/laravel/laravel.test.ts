@@ -7,15 +7,17 @@ import { useSandbox } from "../helpers.ts";
 
 const ctx = useSandbox();
 
-test("laravel: AGENTS.md includes the Pest testing rule; ships precommit + codifying skill", () => {
+test("laravel: AGENTS.md includes the Pest testing rule; ships precommit + Pest codifying override", () => {
 	install({ target: ctx.target, stack: "laravel", commitHelper: false });
 	expect(readFileSync(join(ctx.target, "AGENTS.md"), "utf8")).toContain("Pest");
 	expect(existsSync(join(ctx.target, ".agent-equip/precommit"))).toBe(true);
-	expect(
-		existsSync(
-			join(ctx.target, ".claude/skills/codifying-existing-behavior/SKILL.md"),
-		),
-	).toBe(true);
+	const skill = join(
+		ctx.target,
+		".agent-equip/skills/codifying-existing-behavior.md",
+	);
+	expect(existsSync(skill)).toBe(true);
+	// The laravel layer overrides the generic common skill — the Pest-specific body wins.
+	expect(readFileSync(skill, "utf8")).toContain("Pest conventions");
 });
 
 test("stack metadata files (packages.json, stack.json) are not seeded into the target", () => {

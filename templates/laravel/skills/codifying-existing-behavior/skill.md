@@ -1,6 +1,6 @@
 ---
 name: codifying-existing-behavior
-description: Use when modifying existing backend business logic — refactoring, fixing bugs, or changing behavior of an existing service, model, job, action, command, or controller method. Mandates writing a test that codifies current behavior (or reproduces the bug) BEFORE touching production code. For bugs, the test starts red. For non-bug changes, the test starts green and stays green-with-new-assertions after the change. Skip for UI/visual tweaks, copy/comment/formatting changes, pure additions of new methods or classes, dependency bumps, and code with no reasonable test seam.
+description: Use when modifying existing backend business logic — refactoring, fixing bugs, or changing behavior of an existing service, model, job, action, command, or controller method. Mandates writing a test that codifies current behavior (or reproduces the bug) BEFORE touching production code. For bugs, the test starts red. For non-bug changes, the test starts green and stays green after the change. Skip for UI/visual tweaks, copy/comment/formatting changes, pure additions of new methods or classes, dependency bumps, and code with no reasonable test seam.
 ---
 
 <!-- managed by agent-equip — edit this file and it becomes yours (agent-equip then stops updating it); customize by adding your own skill alongside instead. -->
@@ -8,6 +8,8 @@ description: Use when modifying existing backend business logic — refactoring,
 # Codifying Existing Behavior
 
 When changing existing backend business logic, **codify current behavior in a test before changing the code**. This builds coverage where it's missing and makes the change safer to verify. Test-first is intentional scope expansion — it is the point, not a violation of "surgical changes."
+
+For brand-new behavior with no existing code to pin, use the `test-driven-development` skill instead — that's normal TDD, this is characterization.
 
 ## When this applies
 
@@ -23,7 +25,7 @@ Invoke when the user asks for any of:
 Do NOT block on this rule when the change is:
 - **UI / visual**: Blade tweaks, Tailwind classes, form layout, copy text, icon swaps, navigation order.
 - **Trivial**: comment edits, docblock changes, formatting, renames with no behavior change, dependency version bumps.
-- **Pure additions**: a brand-new method, class, file, or feature that has no existing behavior to characterize. (The new code still needs its own test — that's normal TDD, not characterization.)
+- **Pure additions**: a brand-new method, class, file, or feature that has no existing behavior to characterize. (The new code still needs its own test — that's normal TDD, not characterization; see the `test-driven-development` skill.)
 - **Untestable surfaces**: render hooks, vendor view overrides, artisan command output formatting, log message wording, infrastructure glue with no seam. State *why* it's untestable and proceed.
 
 If unsure whether a change qualifies, say so and ask. Do not guess.
@@ -36,12 +38,12 @@ If the request is vague ("refactor the payment service", "clean up that controll
 
 ### Step 1 — Research existing coverage (subagent)
 
-Dispatch an `Explore` subagent (read-only, fast) with a self-contained prompt asking:
+Search the test suite for existing coverage — use a read-only subagent if your harness has one, otherwise search directly. Answer:
 - "Does any existing test exercise `<Class>::<method>` or the behavior `<short description>`?"
-- Likely paths to check (let Explore find them, don't hardcode):
+- Likely paths to check (find them, don't hardcode):
   - `tests/Feature/`, `tests/Unit/`
   - Any test file matching the namespace or feature name
-- Have it report: existing tests touching this code, coverage gaps for the specific behavior being changed, and the most natural file to extend (or "no covering test exists").
+- Report: existing tests touching this code, coverage gaps for the specific behavior being changed, and the most natural file to extend (or "no covering test exists").
 
 Wait for findings before writing a test. If coverage exists and is adequate, **extend the existing file**, do not create a parallel one.
 
@@ -83,6 +85,8 @@ The user can override at any time:
 - "skip the test, just fix it" / "no characterization needed" → skip cleanly, do not lecture.
 - "I'll write the test myself" → skip Steps 1–3, proceed to the change.
 - For one-line typo fixes / config tweaks even in business-logic files, use judgment and state the call: "This is a one-line constant change — skipping the characterization step. Object?"
+
+When running unattended (CI, an autonomous workspace) with no user to answer, don't block on the scope question or Step 3 approval — state the behavior you pinned and your assumptions explicitly in your report, then proceed.
 
 ## Tradeoff acknowledgment
 

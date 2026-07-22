@@ -15,13 +15,14 @@ import {
 import { Command } from "commander";
 import pkg from "../package.json" with { type: "json" };
 import { applyAgentTools, missingAgentTools } from "../src/agentTools.ts";
-import { install } from "../src/install.ts";
+import { type Agent, install, KNOWN_AGENTS } from "../src/install.ts";
 import { installPackage, missingPackages } from "../src/packages.ts";
 import { REPO_ROOT } from "../src/paths.ts";
 import { listStacks, stackExists, stackMeta } from "../src/templates.ts";
 
 interface InitOptions {
 	stack?: string;
+	agents?: string;
 	dryRun: boolean;
 	yes: boolean;
 	projectOnly: boolean;
@@ -29,6 +30,11 @@ interface InitOptions {
 	packages: boolean;
 	agentTools: boolean;
 }
+
+const AGENT_OPTIONS = [
+	{ value: "claude", label: "Claude Code", hint: ".claude/skills + commands" },
+	{ value: "codex", label: "Codex CLI", hint: "reads AGENTS.md" },
+];
 
 const program = new Command();
 program
@@ -41,6 +47,10 @@ program
 	.description("install AI-dev tooling into a target project")
 	.argument("[target]", "target project directory", ".")
 	.option("-s, --stack <name>", "stack template to install")
+	.option(
+		"--agents <list>",
+		"agents to target, comma-separated (default: all; known: claude,codex)",
+	)
 	.option("--dry-run", "show what would change without writing", false)
 	.option("-y, --yes", "don't prompt (requires --stack)", false)
 	.option(
@@ -71,9 +81,10 @@ program
 		if (!opts.yes) {
 			intro("agent-equip");
 			note(
-				"Seeds cross-agent instructions (AGENTS.md) plus a Claude adapter and\n" +
-					"on-demand skills, a `commit` helper, and Conductor scaffolding — tailored\n" +
-					"to your stack and merged safely into files you already have.\n\n" +
+				"Seeds cross-agent instructions (AGENTS.md) plus on-demand skills and\n" +
+					"adapters for the agents you pick, a `commit` helper, and Conductor\n" +
+					"scaffolding — tailored to your stack and merged safely into files you\n" +
+					"already have.\n\n" +
 					"When it finishes, run /agent-equip in your agent to onboard the project.",
 				"What this does",
 			);
@@ -100,9 +111,12 @@ program
 		if (!stackExists(stack))
 			fail(`unknown stack '${stack}'. Available: ${listStacks().join(", ")}`);
 
+		const agents = await resolveAgents(opts);
+
 		const report = install({
 			target,
 			stack,
+			agents,
 			dryRun: opts.dryRun,
 			commitHelper: !opts.projectOnly,
 		});
@@ -222,6 +236,40 @@ async function handleAgentTools(
 	const chosen = missing.filter((t) => selected.includes(t.id));
 	applyAgentTools(target, chosen);
 	for (const t of chosen) log.step(`enabled ${t.name}`);
+}
+
+/** Resolve which agents to target: explicit --agents, else prompt, else default to all. */
+async function resolveAgents(opts: InitOptions): Promise<Agent[]> {
+	let chosen: string[];
+	if (opts.agents !== undefined) {
+		chosen = opts.agents
+			.split(",")
+			.map((a) => a.trim())
+			.filter(Boolean);
+	} else if (opts.yes || !process.stdout.isTTY) {
+		chosen = [...KNOWN_AGENTS];
+	} else {
+		const selected = await multiselect({
+			message: "Which agents do you use? (space to toggle, enter to confirm)",
+			required: true,
+			initialValues: [...KNOWN_AGENTS],
+			options: AGENT_OPTIONS,
+		});
+		if (isCancel(selected)) {
+			cancel("Cancelled.");
+			process.exit(1);
+		}
+		chosen = selected;
+	}
+
+	const unknown = chosen.filter(
+		(a) => !(KNOWN_AGENTS as readonly string[]).includes(a),
+	);
+	if (unknown.length)
+		fail(
+			`unknown agent(s): ${unknown.join(", ")}. Known: ${KNOWN_AGENTS.join(", ")}`,
+		);
+	return chosen as Agent[];
 }
 
 function fail(msg: string): never {
