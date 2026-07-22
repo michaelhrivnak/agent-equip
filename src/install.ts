@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import pkg from "../package.json" with { type: "json" };
 import { installCommitHelper } from "./commitHelper.ts";
-import { loadManifest, type Manifest, saveManifest } from "./manifest.ts";
+import { type FileHashes, loadManifest, saveManifest } from "./manifest.ts";
 import {
 	ensureBlock,
 	manifestedCopy,
@@ -34,6 +35,8 @@ export interface FileAction {
 export interface InstallReport {
 	target: string;
 	stack: string;
+	/** CLI version stamped into the manifest header + AGENTS.md marker on this run. */
+	version: string;
 	commitHelper: string;
 	files: FileAction[];
 }
@@ -84,8 +87,8 @@ function applyStrategy(
 	src: string,
 	dst: string,
 	dryRun: boolean,
-	prev: Manifest,
-	next: Manifest,
+	prev: FileHashes,
+	next: FileHashes,
 ): Outcome {
 	switch (strategyFor(rel)) {
 		case "claude-md":
@@ -104,8 +107,11 @@ function applyStrategy(
 				"# agent-equip <<<",
 				dryRun,
 			);
-		case "json":
-			return mergeJson(src, dst, dryRun);
+		case "json": {
+			const result = mergeJson(src, dst, prev[rel], dryRun);
+			if (result.hash !== undefined) next[rel] = result.hash;
+			return result.outcome;
+		}
 		case "msbuild":
 			return mergeMsbuild(src, dst, dryRun);
 		default: {
@@ -127,8 +133,8 @@ export function install(opts: InstallOptions): InstallReport {
 		agents = KNOWN_AGENTS,
 	} = opts;
 	const files: FileAction[] = [];
-	const prev = loadManifest(target);
-	const next: Manifest = {};
+	const prev = loadManifest(target).files;
+	const next: FileHashes = {};
 
 	const entries = [...composeFiles(stack).entries()].sort((a, b) =>
 		a[0].localeCompare(b[0]),
@@ -180,18 +186,31 @@ export function install(opts: InstallOptions): InstallReport {
 		path: "AGENTS.md",
 		outcome: ensureBlock(
 			join(target, "AGENTS.md"),
-			assembleAgents(stack),
+			assembleAgents(stack, pkg.version),
 			"<!-- agent-equip >>>",
 			"<!-- agent-equip <<< -->",
 			dryRun,
 		),
 	});
 
-	// Record what agent-equip wrote, so the next run can tell pristine files from forked ones.
-	if (!dryRun) saveManifest(target, next);
+	// Record what agent-equip wrote (plus the install params), so a later run/update can tell
+	// pristine files from forked ones and re-run the same compose+merge non-interactively.
+	if (!dryRun)
+		saveManifest(target, {
+			version: pkg.version,
+			stack,
+			agents: [...agents],
+			files: next,
+		});
 
 	const commitHelperMsg = commitHelper
 		? installCommitHelper(dryRun)
 		: "commit helper: skipped (--project-only)";
-	return { target, stack, commitHelper: commitHelperMsg, files };
+	return {
+		target,
+		stack,
+		version: pkg.version,
+		commitHelper: commitHelperMsg,
+		files,
+	};
 }

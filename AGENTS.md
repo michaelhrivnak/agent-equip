@@ -52,7 +52,7 @@ repo. See `README.md` for the full overview.
 - `bun install`; `bun test`; `bun run lint` / `bun run typecheck` / `bun run fix`.
 - Drive the CLI: `bun run bin/agent-equip.ts init <target> --stack <name>` (`--dry-run` to preview).
 
-<!-- agent-equip >>> (managed by agent-equip — content between these markers may be overwritten on re-install) -->
+<!-- agent-equip >>> v0.0.3 (managed by agent-equip — content between these markers may be overwritten on re-install) -->
 Personal or global agent instructions take precedence over the project conventions below. On any conflict, follow the personal instruction and say so.
 
 # Git

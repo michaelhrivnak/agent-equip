@@ -1,10 +1,58 @@
 import { expect, test } from "bun:test";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { mergeMsbuild } from "../../src/merge.ts";
+import { hash } from "../../src/manifest.ts";
+import { mergeJson, mergeMsbuild } from "../../src/merge.ts";
 import { useSandbox } from "../helpers.ts";
 
 const ctx = useSandbox();
+
+/** Write a template + target JSON pair in the sandbox, return their paths. */
+function jsonFixtures(
+	tpl: string,
+	target?: string,
+): { src: string; dst: string } {
+	const src = join(ctx.target, "tpl.json");
+	const dst = join(ctx.target, "out.json");
+	writeFileSync(src, tpl);
+	if (target !== undefined) writeFileSync(dst, target);
+	return { src, dst };
+}
+
+test("mergeJson seeds an absent target and records its hash", () => {
+	const { src, dst } = jsonFixtures(`{"a":1}\n`);
+	const r = mergeJson(src, dst, undefined);
+	expect(r.outcome).toBe("created");
+	expect(r.hash).toBe(hash(readFileSync(dst)));
+});
+
+test("mergeJson deep-merges (existing wins), reports merged-json, records the merged hash", () => {
+	const { src, dst } = jsonFixtures(`{"a":1,"b":2}\n`, `{"a":9}\n`);
+	const r = mergeJson(src, dst, hash(`{"a":9}\n`)); // prevHash == current → not hand-edited
+	expect(r.outcome).toBe("merged-json");
+	const out = JSON.parse(readFileSync(dst, "utf8"));
+	expect(out.a).toBe(9); // existing wins
+	expect(out.b).toBe(2); // template key added
+	expect(r.hash).toBe(hash(readFileSync(dst)));
+});
+
+test("mergeJson surfaces a hand-edited target as forked yet still merges non-destructively", () => {
+	const { src, dst } = jsonFixtures(`{"a":1,"b":2}\n`, `{"a":9}\n`);
+	const r = mergeJson(src, dst, hash(`{"a":1}\n`)); // prevHash != current → hand-edited
+	expect(r.outcome).toBe("forked");
+	const out = JSON.parse(readFileSync(dst, "utf8"));
+	expect(out.a).toBe(9); // user edit kept
+	expect(out.b).toBe(2); // template key still added (safe)
+});
+
+test("mergeJson never overwrites malformed JSON; records the fork sentinel", () => {
+	const { src, dst } = jsonFixtures(`{"a":1}\n`, "{bad");
+	const r = mergeJson(src, dst, undefined);
+	expect(r.outcome).toBe("new-written");
+	expect(r.hash).toBe("forked");
+	expect(readFileSync(dst, "utf8")).toBe("{bad"); // untouched
+	expect(existsSync(`${dst}.agent-equip-new`)).toBe(true);
+});
 
 const TEMPLATE = `<Project>
   <PropertyGroup>

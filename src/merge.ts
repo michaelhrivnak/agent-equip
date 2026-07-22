@@ -163,8 +163,8 @@ function isObject(x: unknown): x is Record<string, unknown> {
 /**
  * Deep-merge template JSON into the target on EVERY run: the target's existing values win (scalars
  * and arrays alike — a key the user set is left as-is), objects merge recursively, and keys the
- * template introduces are added. Non-destructive, so re-running is safe. JSON (e.g. settings.json)
- * is not manifest-tracked today — full pristine/fork tracking for it is ROADMAP M4.
+ * template introduces are added. Non-destructive, so re-running is safe. The merged result's hash
+ * is manifest-tracked by `mergeJson`, so a later `update` can surface a hand-edited settings.json.
  */
 function deepMerge(template: unknown, existing: unknown): unknown {
 	if (!isObject(template) || !isObject(existing))
@@ -178,37 +178,50 @@ function deepMerge(template: unknown, existing: unknown): unknown {
 }
 
 /**
- * Deep-merge template JSON into the target's (existing values win; arrays union). If the target
- * is malformed JSON, never overwrite it — leave a `${dst}.agent-equip-new` instead. Idempotent: an
- * unchanged result is reported up-to-date without rewriting.
+ * Deep-merge template JSON into the target (existing values win). Non-destructive, so re-running
+ * only ADDS the template's new keys — a team edit is never lost. Manifest-tracked: the returned
+ * `hash` is the sha256 of the final bytes (recorded so a later `update` can tell pristine from
+ * hand-edited). When `prevHash` is set and the current bytes no longer match it, the file was
+ * hand-edited since agent-equip last wrote it — reported `forked` (surfaced as "kept yours") even
+ * though the safe merge still runs. If the target is malformed JSON, never overwrite it — leave a
+ * `${dst}.agent-equip-new` and record the fork sentinel. Idempotent.
  */
-export function mergeJson(src: string, dst: string, dryRun = false): Outcome {
+export function mergeJson(
+	src: string,
+	dst: string,
+	prevHash: string | undefined,
+	dryRun = false,
+): ManifestResult {
 	if (!existsSync(dst)) {
+		const srcBuf = readFileSync(src);
 		if (!dryRun) {
 			ensureDir(dst);
 			copyFileSync(src, dst);
 		}
-		return "created";
+		return { outcome: "created", hash: hash(srcBuf) };
 	}
-	if (sameFile(src, dst)) {
+	const curBuf = readFileSync(dst);
+	if (readFileSync(src).equals(curBuf)) {
 		if (!dryRun) clearArtifact(dst);
-		return "up-to-date";
+		return { outcome: "up-to-date", hash: hash(curBuf) };
 	}
-	const current = readFileSync(dst, "utf8");
+	const current = curBuf.toString("utf8");
 	let existing: unknown;
 	try {
 		existing = JSON.parse(current);
 	} catch {
 		// Target is malformed — do not touch it; leave a reconcile copy.
 		if (!dryRun) copyFileSync(src, `${dst}.agent-equip-new`);
-		return "new-written";
+		return { outcome: "new-written", hash: FORK_SENTINEL };
 	}
+	// Hand-edited since we last wrote it? The merge is still safe (existing wins) — surface it once.
+	const edited = prevHash !== undefined && hash(curBuf) !== prevHash;
 	const merged = deepMerge(JSON.parse(readFileSync(src, "utf8")), existing);
 	const next = `${JSON.stringify(merged, null, 2)}\n`;
 	if (next === current) {
 		if (!dryRun) clearArtifact(dst);
-		return "up-to-date";
+		return { outcome: edited ? "forked" : "up-to-date", hash: hash(next) };
 	}
 	if (!dryRun) writeFileSync(dst, next);
-	return "merged-json";
+	return { outcome: edited ? "forked" : "merged-json", hash: hash(next) };
 }

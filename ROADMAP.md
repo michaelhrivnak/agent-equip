@@ -52,13 +52,13 @@ actually used.
 
 ### [M4 — Robustness & updates](https://github.com/michaelhrivnak/agent-equip/milestone/4)
 
-- `agent-equip update` + version stamp + change summary ([#11](https://github.com/michaelhrivnak/agent-equip/issues/11))
-  - Surface upstream changes for *forked* files (the ownership manifest already tracks them). Treat
-    forked **prose** (skills/commands/prompts — likely an accidental edit) as worth surfacing, but
-    stay quiet on forked **scaffold** (precommit, Conductor — intended team ownership).
-  - Extend manifest tracking to `.claude/settings.json`: today it deep-merges every run (non-destructive)
-    but isn't pristine/fork-tracked, because the agent-tools picker also writes into it — `update` must
-    record the post-picker hash so only human edits count as divergence.
+- ✅ `agent-equip update` + version stamp + change summary ([#11](https://github.com/michaelhrivnak/agent-equip/issues/11))
+  - `agent-equip update [target]` re-runs the install non-interactively — the manifest header now
+    persists `{version, stack, agents}` — and reports a `vX → vY` line plus the per-file outcomes.
+  - The `AGENTS.md` managed-block marker carries the CLI version (`<!-- agent-equip >>> vX.Y.Z … -->`).
+  - Forked files are surfaced in one flat "kept your local edits" list (no prose-vs-scaffold split).
+  - Manifest tracking extended to `.claude/settings.json` / `.mcp.json`: their post-picker hash is
+    recorded so only later human edits count as divergence (surfaced once, still deep-merged safely).
 - Live-verify & harden the permissions block ([#12](https://github.com/michaelhrivnak/agent-equip/issues/12))
 - Onboarding: handle monorepos / very large codebases ([#13](https://github.com/michaelhrivnak/agent-equip/issues/13))
 - Per-stack code hooks (`detect()`/`postInstall()`) ([#14](https://github.com/michaelhrivnak/agent-equip/issues/14))

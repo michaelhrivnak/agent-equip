@@ -15,7 +15,13 @@ import {
 import { Command } from "commander";
 import pkg from "../package.json" with { type: "json" };
 import { applyAgentTools, missingAgentTools } from "../src/agentTools.ts";
-import { type Agent, install, KNOWN_AGENTS } from "../src/install.ts";
+import {
+	type Agent,
+	type InstallReport,
+	install,
+	KNOWN_AGENTS,
+} from "../src/install.ts";
+import { loadManifest, manifestPath, restampFiles } from "../src/manifest.ts";
 import { installPackage, missingPackages } from "../src/packages.ts";
 import { REPO_ROOT } from "../src/paths.ts";
 import { listStacks, stackExists, stackMeta } from "../src/templates.ts";
@@ -120,16 +126,16 @@ program
 			dryRun: opts.dryRun,
 			commitHelper: !opts.projectOnly,
 		});
-		for (const f of report.files) {
-			const hint =
-				f.outcome === "new-written" ? `  → review ${f.path}.agent-equip-new` : "";
-			console.log(`  ${f.outcome.padEnd(12)} ${f.path}${hint}`);
-		}
-		console.log(`  ${report.commitHelper}`);
+		printReport(report);
 
 		// Curated packages run last, after the file/tooling installs.
 		if (opts.packages !== false) await handlePackages(target, stack, opts);
 		if (opts.agentTools !== false) await handleAgentTools(target, stack, opts);
+
+		// The agent-tools picker writes .claude/settings.json / .mcp.json AFTER install saved the
+		// manifest — re-stamp their hashes to the post-picker bytes so only later human edits diverge.
+		if (!opts.dryRun)
+			restampFiles(target, [".claude/settings.json", ".mcp.json"]);
 
 		if (!opts.dryRun) {
 			note(
@@ -147,10 +153,88 @@ program
 		);
 	});
 
+interface UpdateOptions {
+	stack?: string;
+	dryRun: boolean;
+	projectOnly: boolean;
+}
+
+program
+	.command("update")
+	.description(
+		"refresh agent-equip's managed files to the current templates (reads the installed stack/agents)",
+	)
+	.argument("[target]", "target project directory", ".")
+	.option(
+		"-s, --stack <name>",
+		"override the stack (needed for a pre-versioned install)",
+	)
+	.option("--dry-run", "show what would change without writing", false)
+	.option(
+		"--project-only",
+		"seed project files only; skip the user-level commit helper",
+		false,
+	)
+	.action((targetArg: string, opts: UpdateOptions) => {
+		const target = resolve(targetArg);
+		if (!existsSync(target)) fail(`target '${targetArg}' does not exist`);
+		if (!statSync(target).isDirectory())
+			fail(`target '${targetArg}' is not a directory`);
+		if (!existsSync(manifestPath(target)))
+			fail("not installed here — run 'agent-equip init' first");
+
+		const manifest = loadManifest(target);
+		const stack = opts.stack ?? manifest.stack;
+		if (!stack)
+			fail(
+				"manifest has no stack (pre-versioned install) — re-run 'agent-equip init' or pass --stack",
+			);
+		if (!stackExists(stack))
+			fail(`unknown stack '${stack}'. Available: ${listStacks().join(", ")}`);
+		const agents = manifest.agents ?? [...KNOWN_AGENTS];
+		const from = manifest.version ? `v${manifest.version}` : "unknown";
+		console.error(`agent-equip: updating with agents: ${agents.join(", ")}`);
+
+		const report = install({
+			target,
+			stack,
+			agents,
+			dryRun: opts.dryRun,
+			commitHelper: !opts.projectOnly,
+		});
+
+		const changed = report.files.filter((f) => f.outcome !== "up-to-date");
+		if (from === `v${report.version}` && changed.length === 0)
+			console.log(`  already up to date at v${report.version}`);
+		else console.log(`  ${from} → v${report.version}`);
+		printReport(report);
+
+		outro(
+			opts.dryRun
+				? "Dry run — nothing written."
+				: `Updated '${stack}' in ${target}`,
+		);
+	});
+
 program
 	.command("list")
 	.description("list available stacks")
 	.action(() => console.log(listStacks().join("\n")));
+
+/** Print the per-file outcomes + commit-helper line, gathering forked files under a note. */
+function printReport(report: InstallReport): void {
+	for (const f of report.files) {
+		const hint =
+			f.outcome === "new-written" ? `  → review ${f.path}.agent-equip-new` : "";
+		console.log(`  ${f.outcome.padEnd(12)} ${f.path}${hint}`);
+	}
+	console.log(`  ${report.commitHelper}`);
+	const forked = report.files.filter((f) => f.outcome === "forked");
+	if (forked.length)
+		console.log(
+			`  kept your local edits (not overwritten): ${forked.map((f) => f.path).join(", ")}`,
+		);
+}
 
 /** Offer to install the stack's curated packages that are missing from the target. */
 async function handlePackages(

@@ -96,17 +96,20 @@ export function composeSkills(stack: string): SkillMeta[] {
 	return skills.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-const AGENTS_START =
-	"<!-- agent-equip >>> (managed by agent-equip — content between these markers may be overwritten on re-install) -->";
+// The version is stamped AFTER the `>>>` prefix, not into it — `stripBlock`/`ensureBlock` match on
+// the constant `<!-- agent-equip >>>` prefix, so a version bump refreshes the block in place
+// instead of leaving a stale duplicate marker.
+const agentsStart = (version: string): string =>
+	`<!-- agent-equip >>> v${version} (managed by agent-equip — content between these markers may be overwritten on re-install) -->`;
 const AGENTS_END = "<!-- agent-equip <<< -->";
 
 /**
  * Build the canonical, cross-agent AGENTS.md content (marked block) by concatenating the
  * composed `rules/*.md` fragments (common + stack, stack overrides same-named) under a short
  * precedence preamble. This keeps the rules as small, per-concern source files while emitting
- * a single file every agent can read.
+ * a single file every agent can read. `version` is stamped into the managed-block marker.
  */
-export function assembleAgents(stack: string): string {
+export function assembleAgents(stack: string, version: string): string {
 	const sections = [...composeFiles(stack).entries()]
 		.filter(([rel]) => rel.startsWith("rules/") && rel.endsWith(".md"))
 		.sort((a, b) => a[0].localeCompare(b[0]))
@@ -115,8 +118,10 @@ export function assembleAgents(stack: string): string {
 		"Personal or global agent instructions take precedence over the project conventions " +
 		"below. On any conflict, follow the personal instruction and say so.";
 	const skillsIndex = buildSkillsIndex(stack);
-	const body = [preamble, ...sections, skillsIndex].filter(Boolean).join("\n\n");
-	return `${AGENTS_START}\n${body}\n${AGENTS_END}\n`;
+	const body = [preamble, ...sections, skillsIndex]
+		.filter(Boolean)
+		.join("\n\n");
+	return `${agentsStart(version)}\n${body}\n${AGENTS_END}\n`;
 }
 
 /**

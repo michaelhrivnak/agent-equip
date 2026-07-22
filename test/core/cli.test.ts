@@ -5,6 +5,7 @@ import {
 	mkdtempSync,
 	readFileSync,
 	rmSync,
+	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -75,4 +76,34 @@ test("`init` fails cleanly when the target does not exist", () => {
 	const res = run(["init", join(sandbox, "nope"), "--stack", "laravel"]);
 	expect(res.code).toBe(1);
 	expect(res.stderr).toContain("does not exist");
+});
+
+test("`update` before any install fails and points to init", () => {
+	const res = run(["update", target]);
+	expect(res.code).toBe(1);
+	expect(res.stderr).toContain("run 'agent-equip init' first");
+});
+
+test("`update` reuses the installed stack/agents and reports up-to-date right after init", () => {
+	run(["init", target, "--stack", "laravel", "--project-only"]);
+	const res = run(["update", target, "--project-only"]); // no --stack — read from manifest
+	expect(res.code, res.stderr).toBe(0);
+	expect(res.stdout).toContain("already up to date");
+});
+
+test("`update` surfaces a hand-edited settings.json but preserves the edit", () => {
+	run(["init", target, "--stack", "laravel", "--project-only"]);
+	const sp = join(target, ".claude/settings.json");
+	const settings = JSON.parse(readFileSync(sp, "utf8"));
+	settings.myCustomKey = 42;
+	writeFileSync(sp, `${JSON.stringify(settings, null, 2)}\n`);
+
+	const res = run(["update", target, "--project-only"]);
+	expect(res.code, res.stderr).toBe(0);
+	expect(res.stdout).toContain("kept your local edits");
+	expect(res.stdout).toContain(".claude/settings.json");
+
+	const after = JSON.parse(readFileSync(sp, "utf8"));
+	expect(after.myCustomKey).toBe(42); // preserved
+	expect(after.permissions).toBeDefined(); // template still present
 });
